@@ -35,6 +35,10 @@ import { HotCategory } from './entities/hot-category.entity';
 import { HotItem } from './entities/hot-item.entity';
 import { WithdrawalRecord } from './entities/withdrawal-record.entity';
 import { ExportArchive } from './entities/export-archive.entity';
+import { CrossRegionApplication } from './entities/cross-region-application.entity';
+import { CrossRegionDepartment } from './entities/cross-region-department.entity';
+import { CrossRegionProgressShare } from './entities/cross-region-progress-share.entity';
+import { CrossRegionMessageLog } from './entities/cross-region-message-log.entity';
 import { UserModule } from './modules/user/user.module';
 import { HighFrequencyModule } from './modules/high-frequency/high-frequency.module';
 import { ExportArchiveModule } from './modules/export-archive/export-archive.module';
@@ -58,6 +62,7 @@ import { ApprovalModule } from './modules/approval/approval.module';
 import { MaterialTemplateModule } from './modules/material-template/material-template.module';
 import { EvaluationModule } from './modules/evaluation/evaluation.module';
 import { ComplaintModule } from './modules/complaint/complaint.module';
+import { CrossRegionModule } from './modules/cross-region/cross-region.module';
 import { SeedService } from './seed.service';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -71,13 +76,13 @@ import * as path from 'path';
       username: 'root',
       password: 'root123456',
       database: 'government_service',
-      entities: [User, ServiceItem, Application, ProgressRecord, Message, MaterialFile, Schedule, Appointment, SupplementRecord, ProxyApplication, ProxyProgressRecord, ProxyRelation, Favorite, Subscription, Certificate, CertificateDownloadRecord, WindowHandling, QueueCall, ApprovalFlow, ApprovalNode, ApprovalRecord, ApprovalComment, ApprovalHistory, MaterialTemplate, Evaluation, Complaint, Callback, CertificateReminder, JointApplication, JointSubApplication, JointMaterialRelation, HotCategory, HotItem, WithdrawalRecord, ExportArchive],
+      entities: [User, ServiceItem, Application, ProgressRecord, Message, MaterialFile, Schedule, Appointment, SupplementRecord, ProxyApplication, ProxyProgressRecord, ProxyRelation, Favorite, Subscription, Certificate, CertificateDownloadRecord, WindowHandling, QueueCall, ApprovalFlow, ApprovalNode, ApprovalRecord, ApprovalComment, ApprovalHistory, MaterialTemplate, Evaluation, Complaint, Callback, CertificateReminder, JointApplication, JointSubApplication, JointMaterialRelation, HotCategory, HotItem, WithdrawalRecord, ExportArchive, CrossRegionApplication, CrossRegionDepartment, CrossRegionProgressShare, CrossRegionMessageLog],
       synchronize: true,
       logging: false,
       charset: 'utf8mb4',
       timezone: '+08:00',
     }),
-    TypeOrmModule.forFeature([User, ServiceItem, Application, ProgressRecord, Message, MaterialFile, Schedule, Appointment, SupplementRecord, ProxyApplication, ProxyProgressRecord, ProxyRelation, Favorite, Subscription, Certificate, CertificateDownloadRecord, WindowHandling, QueueCall, ApprovalFlow, ApprovalNode, ApprovalRecord, ApprovalComment, ApprovalHistory, MaterialTemplate, Evaluation, Complaint, Callback, CertificateReminder, JointApplication, JointSubApplication, JointMaterialRelation, HotCategory, HotItem, WithdrawalRecord, ExportArchive]),
+    TypeOrmModule.forFeature([User, ServiceItem, Application, ProgressRecord, Message, MaterialFile, Schedule, Appointment, SupplementRecord, ProxyApplication, ProxyProgressRecord, ProxyRelation, Favorite, Subscription, Certificate, CertificateDownloadRecord, WindowHandling, QueueCall, ApprovalFlow, ApprovalNode, ApprovalRecord, ApprovalComment, ApprovalHistory, MaterialTemplate, Evaluation, Complaint, Callback, CertificateReminder, JointApplication, JointSubApplication, JointMaterialRelation, HotCategory, HotItem, WithdrawalRecord, ExportArchive, CrossRegionApplication, CrossRegionDepartment, CrossRegionProgressShare, CrossRegionMessageLog]),
     UserModule,
     ServiceItemModule,
     ApplicationModule,
@@ -101,6 +106,7 @@ import * as path from 'path';
     JointApplicationModule,
     HighFrequencyModule,
     ExportArchiveModule,
+    CrossRegionModule,
   ],
   providers: [SeedService],
 })
@@ -127,6 +133,10 @@ export class AppModule implements OnModuleInit {
     const archivesDir = path.join(uploadDir, 'archives');
     if (!fs.existsSync(archivesDir)) {
       fs.mkdirSync(archivesDir, { recursive: true });
+    }
+    const crossRegionDir = path.join(uploadDir, 'cross-region');
+    if (!fs.existsSync(crossRegionDir)) {
+      fs.mkdirSync(crossRegionDir, { recursive: true });
     }
     await this.seedService.seed();
   }

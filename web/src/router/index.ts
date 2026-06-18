@@ -270,6 +270,30 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/ApprovalDetail.vue'),
         meta: { title: '审批详情' },
       },
+      {
+        path: 'cross-region-apply',
+        name: 'CrossRegionApply',
+        component: () => import('@/views/CrossRegionApply.vue'),
+        meta: { title: '异地办理申请' },
+      },
+      {
+        path: 'my-cross-region',
+        name: 'MyCrossRegionApplications',
+        component: () => import('@/views/MyCrossRegionApplications.vue'),
+        meta: { title: '我的异地办理' },
+      },
+      {
+        path: 'cross-region-applications/:id',
+        name: 'CrossRegionApplicationDetail',
+        component: () => import('@/views/CrossRegionApplicationDetail.vue'),
+        meta: { title: '异地办理详情' },
+      },
+      {
+        path: 'admin/cross-region',
+        name: 'AdminCrossRegion',
+        component: () => import('@/views/AdminCrossRegion.vue'),
+        meta: { title: '异地办理协同管理', admin: true },
+      },
     ],
   },
 ]

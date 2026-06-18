@@ -766,3 +766,120 @@ export interface JointMaterialStats {
     reuseCount: number
   }>
 }
+
+export interface CrossRegionDepartment {
+  id: number
+  name: string
+  code: string
+  region: string
+  contactPhone?: string
+  address?: string
+  active: boolean
+  supportedServiceCodes?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CrossRegionApplication {
+  id: number
+  crossRegionNo: string
+  userId: number
+  user?: User
+  serviceItemId: number
+  serviceItem?: ServiceItem
+  applicationId?: number
+  application?: Application
+  localDepartmentId: number
+  localDepartment?: CrossRegionDepartment
+  remoteDepartmentId: number
+  remoteDepartment?: CrossRegionDepartment
+  currentHandler: 'local' | 'remote'
+  currentHandlerLabel: string
+  status: string
+  statusLabel: string
+  formData: any
+  materials: any[]
+  applicantLocation?: string
+  jurisdictionVerifyStatus: string
+  jurisdictionVerifyResult?: any
+  verifiedAt?: string
+  verifiedBy?: number
+  verifier?: User
+  departmentSwitchCount: number
+  departmentSwitchLog: Array<{
+    from: string
+    to: string
+    operatorId: number
+    reason: string
+    switchedAt: string
+  }>
+  localReviewerId?: number
+  localReviewer?: User
+  remoteReviewerId?: number
+  remoteReviewer?: User
+  reviewComment?: string
+  progressShared: boolean
+  completedAt?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CrossRegionProgressShare {
+  id: number
+  crossRegionApplicationId: number
+  step: string
+  status: string
+  remark: string
+  operatorId: number
+  operator?: User
+  fromDepartmentId: number
+  fromDepartment?: CrossRegionDepartment
+  toDepartmentId: number
+  toDepartment?: CrossRegionDepartment
+  visibleToApplicant: boolean
+  visibleToLocal: boolean
+  visibleToRemote: boolean
+  createdAt: string
+}
+
+export interface CrossRegionMessageLog {
+  id: number
+  crossRegionApplicationId: number
+  targetRole: string
+  targetUserId?: number
+  targetUser?: User
+  targetDepartmentId?: number
+  targetDepartment?: CrossRegionDepartment
+  title: string
+  content: string
+  messageType: string
+  sent: boolean
+  sentAt?: string
+  createdAt: string
+}
+
+export interface JurisdictionCheckResult {
+  serviceItemId: number
+  serviceItemName: string
+  applicantLocation: string
+  isLocalAvailable: boolean
+  isRemoteAvailable: boolean
+  needsCrossRegion: boolean
+  localDepartments: Array<{ id: number; name: string; region: string }>
+  remoteDepartments: Array<{ id: number; name: string; region: string }>
+}
+
+export interface CrossRegionStatistics {
+  total: number
+  pendingVerify: number
+  pendingAccept: number
+  processingLocal: number
+  processingRemote: number
+  approved: number
+  rejected: number
+  completed: number
+  verifyFailed: number
+  byLocalDept: Record<string, number>
+  byRemoteDept: Record<string, number>
+  switchCount: number
+}

@@ -69,6 +69,14 @@
             <el-menu-item index="/joint-apply">发起联合申报</el-menu-item>
             <el-menu-item index="/my-joint-applications">我的联合申报</el-menu-item>
           </el-sub-menu>
+          <el-sub-menu index="cross-region">
+            <template #title>
+              <el-icon><Promotion /></el-icon>
+              <span>异地办理</span>
+            </template>
+            <el-menu-item index="/cross-region-apply">发起异地办理</el-menu-item>
+            <el-menu-item index="/my-cross-region">我的异地办理</el-menu-item>
+          </el-sub-menu>
           <el-menu-item index="/approvals/pending">
             <el-icon><EditPen /></el-icon>
             <span>待办审批</span>
@@ -126,6 +134,7 @@
             <el-menu-item index="/admin/evaluation-dashboard">评价统计看板</el-menu-item>
             <el-menu-item index="/admin/complaints">投诉处理与回访</el-menu-item>
             <el-menu-item index="/admin/high-frequency">高频事项配置</el-menu-item>
+            <el-menu-item index="/admin/cross-region">异地办理协同</el-menu-item>
           </el-sub-menu>
         </el-menu>
       </el-aside>
@@ -161,6 +170,7 @@ import {
   EditPen,
   DocumentCopy,
   HotWater,
+  Promotion,
 } from '@element-plus/icons-vue'
 
 const route = useRoute()
@@ -194,6 +204,7 @@ const activeMenu = computed(() => {
   if (route.path.startsWith('/admin/evaluation-dashboard')) return '/admin/evaluation-dashboard'
   if (route.path.startsWith('/admin/complaints')) return '/admin/complaints'
   if (route.path.startsWith('/admin/high-frequency')) return '/admin/high-frequency'
+  if (route.path.startsWith('/admin/cross-region')) return '/admin/cross-region'
   if (route.path.startsWith('/my-window-handlings')) return '/my-window-handlings'
   if (route.path.startsWith('/my-evaluations')) return '/my-evaluations'
   if (route.path.startsWith('/my-complaints')) return '/my-complaints'
@@ -209,6 +220,9 @@ const activeMenu = computed(() => {
   if (route.path.startsWith('/joint-apply')) return '/joint-apply'
   if (route.path.startsWith('/joint-applications')) return '/my-joint-applications'
   if (route.path.startsWith('/my-joint-applications')) return '/my-joint-applications'
+  if (route.path.startsWith('/cross-region-apply')) return '/cross-region-apply'
+  if (route.path.startsWith('/cross-region-applications')) return '/my-cross-region'
+  if (route.path.startsWith('/my-cross-region')) return '/my-cross-region'
   return route.path
 })
 
