@@ -23,12 +23,12 @@ export const generateCertificate = (applicationId: number, operatorId: number) =
   return request.post<any, Certificate>(`/certificates/${applicationId}/generate`, { operatorId })
 }
 
-export const downloadCertificate = (id: number, userId: number) => {
-  return `/api/certificates/${id}/download?userId=${userId}`
+export const downloadCertificate = (id: number, ownerUserId: number, operatorId: number) => {
+  return `/api/certificates/${id}/download?ownerUserId=${ownerUserId}&operatorId=${operatorId}`
 }
 
-export const previewCertificate = (id: number, userId: number) => {
-  return `/api/certificates/${id}/preview?userId=${userId}`
+export const previewCertificate = (id: number, ownerUserId: number, operatorId: number) => {
+  return `/api/certificates/${id}/preview?ownerUserId=${ownerUserId}&operatorId=${operatorId}`
 }
 
 export const getDownloadRecords = (certificateId: number, userId?: number) => {

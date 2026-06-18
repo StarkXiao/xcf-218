@@ -268,18 +268,18 @@ const viewDetail = async (cert: Certificate) => {
 
 const previewCert = (cert: Certificate) => {
   if (!userStore.user) return
-  window.open(previewCertificate(cert.id, cert.userId), '_blank')
+  window.open(previewCertificate(cert.id, cert.userId, userStore.user.id), '_blank')
 }
 
 const previewCurrent = () => {
   if (!currentCert.value || !userStore.user) return
-  window.open(previewCertificate(currentCert.value.id, currentCert.value.userId), '_blank')
+  window.open(previewCertificate(currentCert.value.id, currentCert.value.userId, userStore.user.id), '_blank')
 }
 
 const downloadCurrent = () => {
   if (!currentCert.value || !userStore.user) return
   ElMessage.success('开始下载证明文件')
-  window.location.href = downloadCertificate(currentCert.value.id, currentCert.value.userId)
+  window.location.href = downloadCertificate(currentCert.value.id, currentCert.value.userId, userStore.user.id)
 }
 
 const showDownloadRecords = async () => {

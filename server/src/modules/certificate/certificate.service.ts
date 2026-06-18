@@ -203,13 +203,27 @@ export class CertificateService {
     return { list, total, page, pageSize };
   }
 
-  async downloadCertificate(id: number, userId: number, ip?: string, userAgent?: string) {
-    const cert = await this.findById(id, userId);
+  async downloadCertificate(id: number, ownerUserId: number, operatorId: number, ip?: string, userAgent?: string) {
+    const cert = await this.findById(id, ownerUserId);
 
     await this.downloadRecordRepository.save({
       certificateId: id,
-      userId,
+      userId: operatorId,
       action: 'download',
+      ipAddress: ip,
+      userAgent,
+    });
+
+    return cert;
+  }
+
+  async previewCertificate(id: number, ownerUserId: number, operatorId: number, ip?: string, userAgent?: string) {
+    const cert = await this.findById(id, ownerUserId);
+
+    await this.downloadRecordRepository.save({
+      certificateId: id,
+      userId: operatorId,
+      action: 'preview',
       ipAddress: ip,
       userAgent,
     });

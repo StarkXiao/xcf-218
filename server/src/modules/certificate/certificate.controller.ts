@@ -60,13 +60,15 @@ export class CertificateController {
   @Get(':id/download')
   async downloadCertificate(
     @Param('id') id: string,
-    @Query('userId') userId: string,
+    @Query('ownerUserId') ownerUserId: string,
+    @Query('operatorId') operatorId: string,
     @Req() req: Request,
     @Res() res: Response,
   ) {
     const cert = await this.service.downloadCertificate(
       +id,
-      +userId,
+      +ownerUserId,
+      +operatorId,
       req.ip,
       req.headers['user-agent'],
     );
@@ -85,10 +87,18 @@ export class CertificateController {
   @Get(':id/preview')
   async previewCertificate(
     @Param('id') id: string,
-    @Query('userId') userId: string,
+    @Query('ownerUserId') ownerUserId: string,
+    @Query('operatorId') operatorId: string,
+    @Req() req: Request,
     @Res() res: Response,
   ) {
-    const cert = await this.service.findById(+id, +userId);
+    const cert = await this.service.previewCertificate(
+      +id,
+      +ownerUserId,
+      +operatorId,
+      req.ip,
+      req.headers['user-agent'],
+    );
 
     if (cert.filePath && fs.existsSync(cert.filePath)) {
       res.setHeader('Content-Type', 'text/html; charset=utf-8');

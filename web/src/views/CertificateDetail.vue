@@ -124,13 +124,13 @@ const loadCertificate = async () => {
 
 const previewCert = () => {
   if (!certificate.value || !userStore.user) return
-  window.open(previewCertificate(certificate.value.id, userStore.user.id), '_blank')
+  window.open(previewCertificate(certificate.value.id, certificate.value.userId, userStore.user.id), '_blank')
 }
 
 const downloadCert = () => {
   if (!certificate.value || !userStore.user) return
   ElMessage.success('开始下载证明文件')
-  window.location.href = downloadCertificate(certificate.value.id, userStore.user.id)
+  window.location.href = downloadCertificate(certificate.value.id, certificate.value.userId, userStore.user.id)
 }
 
 const viewDownloadRecords = async () => {
