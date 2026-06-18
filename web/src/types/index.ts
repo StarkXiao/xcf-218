@@ -434,3 +434,34 @@ export interface RejectableNode {
   nodeName: string
   nodeOrder: number
 }
+
+export interface TemplateFieldDef {
+  key: string
+  label: string
+  type: 'text' | 'textarea' | 'number' | 'date' | 'select' | 'file'
+  required: boolean
+  placeholder?: string
+  maxLength?: number
+  pattern?: string
+  patternMessage?: string
+  options?: string[]
+  allowedFileTypes?: string[]
+  maxFileSize?: number
+  defaultValue?: string
+}
+
+export interface MaterialTemplate {
+  id: number
+  name: string
+  description?: string
+  serviceItemId: number
+  serviceItem?: ServiceItem
+  version: number
+  isActive: boolean
+  isCurrent: boolean
+  fields: TemplateFieldDef[]
+  changeLog?: string
+  createdBy?: number
+  createdAt: string
+  updatedAt: string
+}

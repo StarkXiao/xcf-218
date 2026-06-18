@@ -102,6 +102,7 @@
             <el-menu-item index="/admin/certificates">证明管理</el-menu-item>
             <el-menu-item index="/admin/window-coordination">窗口协同办理</el-menu-item>
             <el-menu-item index="/admin/queue-display">叫号大屏</el-menu-item>
+            <el-menu-item index="/admin/material-templates">材料模板管理</el-menu-item>
           </el-sub-menu>
         </el-menu>
       </el-aside>
@@ -159,6 +160,7 @@ const activeMenu = computed(() => {
   if (route.path.startsWith('/admin/certificates')) return '/admin/certificates'
   if (route.path.startsWith('/admin/window-coordination')) return '/admin/window-coordination'
   if (route.path.startsWith('/admin/queue-display')) return '/admin/queue-display'
+  if (route.path.startsWith('/admin/material-templates')) return '/admin/material-templates'
   if (route.path.startsWith('/my-window-handlings')) return '/my-window-handlings'
   if (route.path.startsWith('/admin/review')) return '/admin'
   if (route.path.startsWith('/admin')) return '/admin'

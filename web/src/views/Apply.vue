@@ -50,45 +50,121 @@
           <el-input v-model="formData.address" type="textarea" :rows="2" placeholder="请输入详细地址" />
         </el-form-item>
 
-        <div class="form-section-title">申请信息</div>
+        <div v-if="templateFields.length > 0" class="form-section-title">申请信息与材料</div>
+        <el-alert
+          v-if="templateFields.length > 0"
+          title="以下字段由材料模板自动生成，请按要求填写和上传"
+          type="info"
+          :closable="false"
+          show-icon
+          style="margin-bottom: 20px"
+        />
 
-        <el-form-item label="申请事由" prop="reason">
-          <el-input v-model="formData.reason" type="textarea" :rows="3" placeholder="请详细说明申请事由" />
-        </el-form-item>
+        <template v-for="field in templateFields" :key="field.key">
+          <el-form-item
+            :label="field.label"
+            :prop="`tpl_${field.key}`"
+            :rules="getFieldRules(field)"
+          >
+            <el-input
+              v-if="field.type === 'text'"
+              v-model="formData[`tpl_${field.key}`]"
+              :placeholder="field.placeholder || `请输入${field.label}`"
+              :maxlength="field.maxLength"
+              show-word-limit
+            />
+            <el-input
+              v-else-if="field.type === 'textarea'"
+              v-model="formData[`tpl_${field.key}`]"
+              type="textarea"
+              :rows="3"
+              :placeholder="field.placeholder || `请输入${field.label}`"
+              :maxlength="field.maxLength"
+              show-word-limit
+            />
+            <el-input-number
+              v-else-if="field.type === 'number'"
+              v-model="formData[`tpl_${field.key}`]"
+              :placeholder="field.placeholder || `请输入${field.label}`"
+              style="width: 100%"
+            />
+            <el-date-picker
+              v-else-if="field.type === 'date'"
+              v-model="formData[`tpl_${field.key}`]"
+              type="date"
+              :placeholder="field.placeholder || `请选择${field.label}`"
+              style="width: 100%"
+              value-format="YYYY-MM-DD"
+            />
+            <el-select
+              v-else-if="field.type === 'select'"
+              v-model="formData[`tpl_${field.key}`]"
+              :placeholder="field.placeholder || `请选择${field.label}`"
+              style="width: 100%"
+            >
+              <el-option v-for="opt in field.options" :key="opt" :label="opt" :value="opt" />
+            </el-select>
+            <div v-else-if="field.type === 'file'" style="width: 100%">
+              <el-upload
+                v-model:file-list="uploadedFiles[field.key]"
+                :auto-upload="false"
+                :limit="1"
+                :on-exceed="() => $message.warning('只能上传一个文件')"
+                :on-change="(file: any) => handleFileChange(field.key, file)"
+                :on-remove="() => handleFileRemove(field.key)"
+                :accept="getFieldAccept(field)"
+                :before-upload="(file: any) => beforeFileUpload(field, file)"
+              >
+                <el-button type="primary" :icon="Upload">选择文件</el-button>
+                <template #tip>
+                  <div class="el-upload__tip">
+                    {{ getFieldFileTip(field) }}
+                  </div>
+                </template>
+              </el-upload>
+              <div v-if="uploadedFiles[field.key]?.[0]" class="file-info">
+                <el-icon color="#67c23a"><Check /></el-icon>
+                <span>{{ uploadedFiles[field.key][0].name }} ({{ formatFileSize(uploadedFiles[field.key][0].size || 0) }})</span>
+              </div>
+            </div>
+          </el-form-item>
+        </template>
 
-        <div class="form-section-title">材料上传</div>
-        <p class="form-tip" style="margin-top: -16px; margin-bottom: 20px">
+        <div v-if="templateFields.length === 0 && materialList.length > 0" class="form-section-title">材料上传</div>
+        <p v-if="templateFields.length === 0 && materialList.length > 0" class="form-tip" style="margin-top: -16px; margin-bottom: 20px">
           <el-icon color="#e6a23c"><Warning /></el-icon>
           请确保上传的材料清晰、完整，标有 <span style="color: #f56c6c">*</span> 为必需材料
         </p>
 
-        <el-form-item
-          v-for="(mat, index) in materialList"
-          :key="mat.name"
-          :label="mat.name"
-          :prop="`material_${index}`"
-          :rules="mat.required ? [{ required: true, validator: validateMaterial(index), trigger: 'change' }] : []"
-        >
-          <el-upload
-            v-model:file-list="uploadedFiles[index]"
-            :auto-upload="false"
-            :limit="1"
-            :on-exceed="() => $message.warning('只能上传一个文件')"
-            :on-change="(file) => handleFileChange(index, file)"
-            :on-remove="() => handleFileRemove(index)"
-            accept=".jpg,.jpeg,.png,.pdf"
+        <template v-if="templateFields.length === 0">
+          <el-form-item
+            v-for="(mat, index) in materialList"
+            :key="mat.name"
+            :label="mat.name"
+            :prop="`material_${index}`"
+            :rules="mat.required ? [{ required: true, validator: validateMaterial(index), trigger: 'change' }] : []"
           >
-            <el-button type="primary" :icon="Upload">选择文件</el-button>
-            <template #tip>
-              <div class="el-upload__tip">支持 jpg/png/pdf 格式，单个文件不超过 10MB</div>
-            </template>
-          </el-upload>
-          <span v-if="mat.required" style="color: #f56c6c; margin-left: 8px">*</span>
-          <div v-if="uploadedFiles[index]?.[0]" class="file-info">
-            <el-icon color="#67c23a"><Check /></el-icon>
-            <span>{{ uploadedFiles[index][0].name }} ({{ formatFileSize(uploadedFiles[index][0].size) }})</span>
-          </div>
-        </el-form-item>
+            <el-upload
+              v-model:file-list="legacyUploadedFiles[index]"
+              :auto-upload="false"
+              :limit="1"
+              :on-exceed="() => $message.warning('只能上传一个文件')"
+              :on-change="(file: any) => handleLegacyFileChange(index, file)"
+              :on-remove="() => handleLegacyFileRemove(index)"
+              accept=".jpg,.jpeg,.png,.pdf"
+            >
+              <el-button type="primary" :icon="Upload">选择文件</el-button>
+              <template #tip>
+                <div class="el-upload__tip">支持 jpg/png/pdf 格式，单个文件不超过 10MB</div>
+              </template>
+            </el-upload>
+            <span v-if="mat.required" style="color: #f56c6c; margin-left: 8px">*</span>
+            <div v-if="legacyUploadedFiles[index]?.[0]" class="file-info">
+              <el-icon color="#67c23a"><Check /></el-icon>
+              <span>{{ legacyUploadedFiles[index][0].name }} ({{ formatFileSize(legacyUploadedFiles[index][0].size || 0) }})</span>
+            </div>
+          </el-form-item>
+        </template>
 
         <el-form-item>
           <el-button type="primary" size="large" :loading="submitting" @click="handleSubmit">
@@ -104,13 +180,14 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage, type FormInstance, type FormRules, type UploadFile, type UploadProps } from 'element-plus'
+import { ElMessage, type FormInstance, type FormRules, type UploadFile } from 'element-plus'
 import { Upload } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 import { getServiceItemById } from '@/api/service-item'
+import { getCurrentTemplate } from '@/api/material-template'
 import { createApplication } from '@/api/application'
 import { linkAppointmentApplication } from '@/api/appointment'
-import type { ServiceItem } from '@/types'
+import type { ServiceItem, TemplateFieldDef, MaterialTemplate } from '@/types'
 
 const route = useRoute()
 const router = useRouter()
@@ -121,10 +198,14 @@ const submitting = ref(false)
 const item = ref<ServiceItem | null>(null)
 const formRef = ref<FormInstance>()
 const materialList = ref<any[]>([])
-const uploadedFiles = ref<UploadFile[][]>([])
+const legacyUploadedFiles = ref<UploadFile[][]>([])
 const appointmentId = ref<number | null>(null)
 
-const formData = reactive({
+const templateFields = ref<TemplateFieldDef[]>([])
+const currentTemplate = ref<MaterialTemplate | null>(null)
+const uploadedFiles = ref<Record<string, UploadFile[]>>({})
+
+const formData = reactive<Record<string, any>>({
   name: '',
   idCard: '',
   phone: '',
@@ -132,7 +213,7 @@ const formData = reactive({
   reason: '',
 })
 
-const formRules: FormRules = {
+const baseFormRules: FormRules = {
   name: [{ required: true, message: '请输入姓名', trigger: 'blur' }],
   idCard: [
     { required: true, message: '请输入身份证号', trigger: 'blur' },
@@ -145,15 +226,58 @@ const formRules: FormRules = {
   address: [{ required: true, message: '请输入联系地址', trigger: 'blur' }],
   reason: [{ required: true, message: '请输入申请事由', trigger: 'blur' }],
 }
+const formRules = ref<FormRules>({ ...baseFormRules })
 
-const validateMaterial = (index: number) => {
-  return (_rule: any, _value: any, callback: any) => {
-    if (!uploadedFiles.value[index] || uploadedFiles.value[index].length === 0) {
-      callback(new Error('请上传材料'))
+const getFieldRules = (field: TemplateFieldDef) => {
+  const rules: any[] = []
+  if (field.required) {
+    if (field.type === 'file') {
+      rules.push({
+        required: true,
+        validator: (_rule: any, _value: any, callback: any) => {
+          const files = uploadedFiles.value[field.key]
+          if (!files || files.length === 0) {
+            callback(new Error(`请上传${field.label}`))
+          } else {
+            callback()
+          }
+        },
+        trigger: 'change',
+      })
     } else {
-      callback()
+      rules.push({ required: true, message: `请输入${field.label}`, trigger: field.type === 'select' || field.type === 'date' ? 'change' : 'blur' })
     }
   }
+  if (field.type === 'text' && field.pattern) {
+    rules.push({
+      pattern: new RegExp(field.pattern),
+      message: field.patternMessage || `${field.label}格式不正确`,
+      trigger: 'blur',
+    })
+  }
+  return rules
+}
+
+const getFieldAccept = (field: TemplateFieldDef) => {
+  if (field.type === 'file' && field.allowedFileTypes?.length) {
+    return field.allowedFileTypes.join(',')
+  }
+  return '.jpg,.jpeg,.png,.pdf'
+}
+
+const getFieldFileTip = (field: TemplateFieldDef) => {
+  const parts: string[] = []
+  if (field.allowedFileTypes?.length) {
+    parts.push(`支持 ${field.allowedFileTypes.map(t => t.replace('.', '').toUpperCase()).join('/')} 格式`)
+  } else {
+    parts.push('支持 JPG/PNG/PDF 格式')
+  }
+  if (field.maxFileSize) {
+    parts.push(`单个文件不超过 ${field.maxFileSize}MB`)
+  } else {
+    parts.push('单个文件不超过 10MB')
+  }
+  return parts.join('，')
 }
 
 const formatFileSize = (bytes: number) => {
@@ -162,15 +286,49 @@ const formatFileSize = (bytes: number) => {
   return (bytes / (1024 * 1024)).toFixed(2) + ' MB'
 }
 
-const handleFileChange = (index: number, file: UploadFile) => {
-  if (!uploadedFiles.value[index]) {
-    uploadedFiles.value[index] = []
-  }
-  uploadedFiles.value[index] = [file]
+const handleFileChange = (key: string, file: UploadFile) => {
+  uploadedFiles.value[key] = [file]
 }
 
-const handleFileRemove = (index: number) => {
-  uploadedFiles.value[index] = []
+const handleFileRemove = (key: string) => {
+  uploadedFiles.value[key] = []
+}
+
+const beforeFileUpload = (field: TemplateFieldDef, file: File) => {
+  const maxSize = (field.maxFileSize || 10) * 1024 * 1024
+  if (file.size > maxSize) {
+    ElMessage.error(`${field.label}文件大小不能超过 ${field.maxFileSize || 10}MB`)
+    return false
+  }
+  if (field.allowedFileTypes?.length) {
+    const ext = '.' + file.name.split('.').pop()?.toLowerCase()
+    if (!field.allowedFileTypes.includes(ext)) {
+      ElMessage.error(`${field.label}仅支持 ${field.allowedFileTypes.map(t => t.replace('.', '').toUpperCase()).join('/')} 格式`)
+      return false
+    }
+  }
+  return true
+}
+
+const validateMaterial = (index: number) => {
+  return (_rule: any, _value: any, callback: any) => {
+    if (!legacyUploadedFiles.value[index] || legacyUploadedFiles.value[index].length === 0) {
+      callback(new Error('请上传材料'))
+    } else {
+      callback()
+    }
+  }
+}
+
+const handleLegacyFileChange = (index: number, file: UploadFile) => {
+  if (!legacyUploadedFiles.value[index]) {
+    legacyUploadedFiles.value[index] = []
+  }
+  legacyUploadedFiles.value[index] = [file]
+}
+
+const handleLegacyFileRemove = (index: number) => {
+  legacyUploadedFiles.value[index] = []
 }
 
 const loadItem = async () => {
@@ -179,15 +337,34 @@ const loadItem = async () => {
     if (route.query.appointmentId) {
       appointmentId.value = Number(route.query.appointmentId)
     }
-    item.value = await getServiceItemById(Number(route.params.id))
-    if (item.value?.materials) {
+    const serviceItemId = Number(route.params.id)
+    item.value = await getServiceItemById(serviceItemId)
+
+    const template = await getCurrentTemplate(serviceItemId)
+    if (template && template.fields?.length > 0) {
+      currentTemplate.value = template
+      templateFields.value = template.fields
+      for (const field of template.fields) {
+        const propKey = `tpl_${field.key}`
+        if (field.type === 'file') {
+          uploadedFiles.value[field.key] = []
+        } else if (field.type === 'number') {
+          formData[propKey] = field.defaultValue ? Number(field.defaultValue) : undefined
+        } else if (field.type === 'date') {
+          formData[propKey] = field.defaultValue || ''
+        } else {
+          formData[propKey] = field.defaultValue || ''
+        }
+      }
+    } else if (item.value?.materials) {
       try {
         materialList.value = JSON.parse(item.value.materials)
-        uploadedFiles.value = materialList.value.map(() => [])
+        legacyUploadedFiles.value = materialList.value.map(() => [])
       } catch {
         materialList.value = []
       }
     }
+
     if (userStore.user) {
       formData.name = userStore.user.name
       formData.idCard = userStore.user.idCard
@@ -204,24 +381,61 @@ const handleSubmit = async () => {
   if (!valid) return
 
   const formDataObj = new FormData()
-
   formDataObj.append('userId', String(userStore.user.id))
   formDataObj.append('serviceItemId', String(route.params.id))
-  formDataObj.append('formData', JSON.stringify({ ...formData }))
 
-  const materialsInfo = materialList.value.map((m, i) => ({
-    name: m.name,
-    required: m.required,
-    fieldName: `material_${i}`,
-  }))
-  formDataObj.append('materialsInfo', JSON.stringify(materialsInfo))
-
-  for (let i = 0; i < materialList.value.length; i++) {
-    const files = uploadedFiles.value[i]
-    if (files && files.length > 0 && files[0].raw) {
-      formDataObj.append(`material_${i}`, files[0].raw, files[0].name)
-    }
+  const formPayload: Record<string, any> = {
+    name: formData.name,
+    idCard: formData.idCard,
+    phone: formData.phone,
+    address: formData.address,
+    reason: formData.reason,
   }
+
+  if (templateFields.value.length > 0) {
+    const tplData: Record<string, any> = {}
+    for (const field of templateFields.value) {
+      if (field.type === 'file') continue
+      tplData[field.key] = formData[`tpl_${field.key}`]
+    }
+    formPayload._templateData = tplData
+    formPayload._templateId = currentTemplate.value?.id
+    formPayload._templateVersion = currentTemplate.value?.version
+  }
+
+  formDataObj.append('formData', JSON.stringify(formPayload))
+
+  const materialsInfo: Array<{ name: string; required: boolean; fieldName: string }> = []
+
+  if (templateFields.value.length > 0) {
+    for (const field of templateFields.value) {
+      if (field.type === 'file') {
+        materialsInfo.push({
+          name: field.label,
+          required: field.required,
+          fieldName: `material_tpl_${field.key}`,
+        })
+        const files = uploadedFiles.value[field.key]
+        if (files && files.length > 0 && files[0].raw) {
+          formDataObj.append(`material_tpl_${field.key}`, files[0].raw, files[0].name)
+        }
+      }
+    }
+  } else {
+    materialList.value.forEach((m, i) => {
+      materialsInfo.push({
+        name: m.name,
+        required: m.required,
+        fieldName: `material_${i}`,
+      })
+      const files = legacyUploadedFiles.value[i]
+      if (files && files.length > 0 && files[0].raw) {
+        formDataObj.append(`material_${i}`, files[0].raw, files[0].name)
+      }
+    })
+  }
+
+  formDataObj.append('materialsInfo', JSON.stringify(materialsInfo))
 
   submitting.value = true
   try {

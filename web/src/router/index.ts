@@ -187,6 +187,12 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '叫号大屏', admin: true },
       },
       {
+        path: 'admin/material-templates',
+        name: 'AdminMaterialTemplates',
+        component: () => import('@/views/AdminMaterialTemplates.vue'),
+        meta: { title: '材料模板管理', admin: true },
+      },
+      {
         path: 'approvals/pending',
         name: 'MyPendingApprovals',
         component: () => import('@/views/MyPendingApprovals.vue'),
