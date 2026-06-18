@@ -79,7 +79,7 @@
 
       <el-table
         ref="tableRef"
-        :data="applications"
+        :data="pagedApplications"
         style="width: 100%"
         @selection-change="handleSelectionChange"
         row-key="id"
@@ -204,7 +204,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, Warning, View, RefreshRight } from '@element-plus/icons-vue'
@@ -282,6 +282,12 @@ const totalStats = computed(() => {
 })
 
 const filteredTotal = computed(() => applications.value.length)
+
+const pagedApplications = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value
+  const end = start + pageSize.value
+  return applications.value.slice(start, end)
+})
 
 const getStatusType = (status: string) => {
   const map: Record<string, string> = {
@@ -460,6 +466,22 @@ const submitWithdraw = async () => {
     withdrawLoading.value = false
   }
 }
+
+watch(pageSize, () => {
+  currentPage.value = 1
+  clearSelection()
+})
+
+watch(currentPage, () => {
+  clearSelection()
+})
+
+watch(applications, (newApps) => {
+  const maxPage = Math.max(1, Math.ceil(newApps.length / pageSize.value))
+  if (currentPage.value > maxPage) {
+    currentPage.value = maxPage
+  }
+})
 
 onMounted(() => {
   loadCategories()
