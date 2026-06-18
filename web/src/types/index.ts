@@ -465,3 +465,97 @@ export interface MaterialTemplate {
   createdAt: string
   updatedAt: string
 }
+
+export interface Evaluation {
+  id: number
+  userId: number
+  user?: User
+  applicationId: number
+  application?: Application
+  serviceItemId: number
+  serviceItem?: ServiceItem
+  rating: number
+  content?: string
+  tags: string[]
+  anonymous: boolean
+  reply?: string
+  replyBy?: number
+  replyUser?: User
+  replyAt?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface EvaluationStatistics {
+  totalCount: number
+  avgRating: number
+  ratingDistribution: Record<number, number>
+  tagCount: Record<string, number>
+  byServiceItem: Array<{
+    serviceItemId: number
+    serviceItemName: string
+    avgRating: number
+    count: number
+  }>
+  recentEvaluations: Array<{
+    id: number
+    rating: number
+    content: string
+    anonymous: number
+    userName: string
+    serviceItemName: string
+    createdAt: string
+  }>
+}
+
+export interface Complaint {
+  id: number
+  complaintNo: string
+  userId: number
+  user?: User
+  applicationId?: number
+  application?: Application
+  serviceItemId?: number
+  serviceItem?: ServiceItem
+  type: string
+  title: string
+  content: string
+  status: string
+  handlerId?: number
+  handler?: User
+  handleResult?: string
+  handleAt?: string
+  callbacks?: Callback[]
+  createdAt: string
+  updatedAt: string
+}
+
+export interface Callback {
+  id: number
+  complaintId: number
+  adminId: number
+  admin?: User
+  callbackType: string
+  content: string
+  satisfaction?: number
+  callbackAt: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ComplaintStatistics {
+  totalCount: number
+  pendingCount: number
+  processingCount: number
+  resolvedCount: number
+  rejectedCount: number
+  typeCount: Record<string, number>
+  byServiceItem: Array<{
+    serviceItemId: number
+    serviceItemName: string
+    count: number
+    avgSatisfaction: number
+  }>
+  callbackCount: number
+  avgSatisfaction: number
+}

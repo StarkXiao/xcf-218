@@ -127,6 +127,18 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '窗口办理记录' },
       },
       {
+        path: 'my-evaluations',
+        name: 'MyEvaluations',
+        component: () => import('@/views/MyEvaluations.vue'),
+        meta: { title: '我的评价' },
+      },
+      {
+        path: 'my-complaints',
+        name: 'MyComplaints',
+        component: () => import('@/views/MyComplaints.vue'),
+        meta: { title: '我的投诉' },
+      },
+      {
         path: 'admin/service-items',
         name: 'AdminServiceItems',
         component: () => import('@/views/AdminServiceItems.vue'),
@@ -191,6 +203,18 @@ const routes: RouteRecordRaw[] = [
         name: 'AdminMaterialTemplates',
         component: () => import('@/views/AdminMaterialTemplates.vue'),
         meta: { title: '材料模板管理', admin: true },
+      },
+      {
+        path: 'admin/evaluation-dashboard',
+        name: 'AdminEvaluationDashboard',
+        component: () => import('@/views/AdminEvaluationDashboard.vue'),
+        meta: { title: '评价统计看板', admin: true },
+      },
+      {
+        path: 'admin/complaints',
+        name: 'AdminComplaints',
+        component: () => import('@/views/AdminComplaints.vue'),
+        meta: { title: '投诉处理与回访', admin: true },
       },
       {
         path: 'approvals/pending',
