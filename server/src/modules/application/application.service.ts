@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, forwardRef, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { Application } from '../../entities/application.entity';
@@ -7,6 +7,7 @@ import { Message } from '../../entities/message.entity';
 import { MaterialFile } from '../../entities/material-file.entity';
 import { ServiceItem } from '../../entities/service-item.entity';
 import { User } from '../../entities/user.entity';
+import { JointApplicationService } from '../joint-application/joint-application.service';
 
 interface MaterialInfo {
   name: string;
@@ -31,6 +32,8 @@ export class ApplicationService {
     @InjectRepository(MaterialFile) private readonly fileRepository: Repository<MaterialFile>,
     @InjectRepository(ServiceItem) private readonly itemRepository: Repository<ServiceItem>,
     @InjectRepository(User) private readonly userRepository: Repository<User>,
+    @Inject(forwardRef(() => JointApplicationService))
+    private readonly jointApplicationService: JointApplicationService,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -208,6 +211,12 @@ export class ApplicationService {
       type: 'application',
       applicationId: id,
     });
+
+    try {
+      await this.jointApplicationService.syncSubApplicationStatus(id);
+    } catch (e) {
+      // ignore
+    }
 
     return this.findOne(id);
   }

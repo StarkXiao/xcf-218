@@ -55,6 +55,24 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '进度跟踪' },
       },
       {
+        path: 'joint-apply',
+        name: 'JointApply',
+        component: () => import('@/views/JointApply.vue'),
+        meta: { title: '跨事项联合申报' },
+      },
+      {
+        path: 'my-joint-applications',
+        name: 'MyJointApplications',
+        component: () => import('@/views/MyJointApplications.vue'),
+        meta: { title: '我的联合申报' },
+      },
+      {
+        path: 'joint-applications/:id',
+        name: 'JointApplicationDetail',
+        component: () => import('@/views/JointApplicationDetail.vue'),
+        meta: { title: '联合申报详情' },
+      },
+      {
         path: 'applications/:id',
         name: 'ApplicationDetail',
         component: () => import('@/views/ApplicationDetail.vue'),

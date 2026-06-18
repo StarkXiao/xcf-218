@@ -57,6 +57,14 @@
             <el-icon><List /></el-icon>
             <span>进度跟踪</span>
           </el-menu-item>
+          <el-sub-menu index="joint">
+            <template #title>
+              <el-icon><DocumentCopy /></el-icon>
+              <span>联合申报</span>
+            </template>
+            <el-menu-item index="/joint-apply">发起联合申报</el-menu-item>
+            <el-menu-item index="/my-joint-applications">我的联合申报</el-menu-item>
+          </el-sub-menu>
           <el-menu-item index="/approvals/pending">
             <el-icon><EditPen /></el-icon>
             <span>待办审批</span>
@@ -145,6 +153,7 @@ import {
   User,
   ArrowDown,
   EditPen,
+  DocumentCopy,
 } from '@element-plus/icons-vue'
 
 const route = useRoute()
@@ -187,6 +196,9 @@ const activeMenu = computed(() => {
   if (route.path.startsWith('/proxy-relations')) return '/proxy-relations'
   if (route.path.startsWith('/approvals/pending')) return '/approvals/pending'
   if (route.path.startsWith('/approvals/')) return '/approvals/pending'
+  if (route.path.startsWith('/joint-apply')) return '/joint-apply'
+  if (route.path.startsWith('/joint-applications')) return '/my-joint-applications'
+  if (route.path.startsWith('/my-joint-applications')) return '/my-joint-applications'
   return route.path
 })
 

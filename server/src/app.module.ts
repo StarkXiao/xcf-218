@@ -28,8 +28,12 @@ import { Evaluation } from './entities/evaluation.entity';
 import { Complaint } from './entities/complaint.entity';
 import { Callback } from './entities/callback.entity';
 import { CertificateReminder } from './entities/certificate-reminder.entity';
+import { JointApplication } from './entities/joint-application.entity';
+import { JointSubApplication } from './entities/joint-sub-application.entity';
+import { JointMaterialRelation } from './entities/joint-material-relation.entity';
 import { UserModule } from './modules/user/user.module';
 import { CertificateReminderModule } from './modules/certificate-reminder/certificate-reminder.module';
+import { JointApplicationModule } from './modules/joint-application/joint-application.module';
 import { ServiceItemModule } from './modules/service-item/service-item.module';
 import { ApplicationModule } from './modules/application/application.module';
 import { ProgressModule } from './modules/progress/progress.module';
@@ -61,13 +65,13 @@ import * as path from 'path';
       username: 'root',
       password: 'root123456',
       database: 'government_service',
-      entities: [User, ServiceItem, Application, ProgressRecord, Message, MaterialFile, Schedule, Appointment, SupplementRecord, ProxyApplication, ProxyProgressRecord, ProxyRelation, Favorite, Subscription, Certificate, CertificateDownloadRecord, WindowHandling, QueueCall, ApprovalFlow, ApprovalNode, ApprovalRecord, ApprovalComment, ApprovalHistory, MaterialTemplate, Evaluation, Complaint, Callback, CertificateReminder],
+      entities: [User, ServiceItem, Application, ProgressRecord, Message, MaterialFile, Schedule, Appointment, SupplementRecord, ProxyApplication, ProxyProgressRecord, ProxyRelation, Favorite, Subscription, Certificate, CertificateDownloadRecord, WindowHandling, QueueCall, ApprovalFlow, ApprovalNode, ApprovalRecord, ApprovalComment, ApprovalHistory, MaterialTemplate, Evaluation, Complaint, Callback, CertificateReminder, JointApplication, JointSubApplication, JointMaterialRelation],
       synchronize: true,
       logging: false,
       charset: 'utf8mb4',
       timezone: '+08:00',
     }),
-    TypeOrmModule.forFeature([User, ServiceItem, Application, ProgressRecord, Message, MaterialFile, Schedule, Appointment, SupplementRecord, ProxyApplication, ProxyProgressRecord, ProxyRelation, Favorite, Subscription, Certificate, CertificateDownloadRecord, WindowHandling, QueueCall, ApprovalFlow, ApprovalNode, ApprovalRecord, ApprovalComment, ApprovalHistory, MaterialTemplate, Evaluation, Complaint, Callback, CertificateReminder]),
+    TypeOrmModule.forFeature([User, ServiceItem, Application, ProgressRecord, Message, MaterialFile, Schedule, Appointment, SupplementRecord, ProxyApplication, ProxyProgressRecord, ProxyRelation, Favorite, Subscription, Certificate, CertificateDownloadRecord, WindowHandling, QueueCall, ApprovalFlow, ApprovalNode, ApprovalRecord, ApprovalComment, ApprovalHistory, MaterialTemplate, Evaluation, Complaint, Callback, CertificateReminder, JointApplication, JointSubApplication, JointMaterialRelation]),
     UserModule,
     ServiceItemModule,
     ApplicationModule,
@@ -88,6 +92,7 @@ import * as path from 'path';
     EvaluationModule,
     ComplaintModule,
     CertificateReminderModule,
+    JointApplicationModule,
   ],
   providers: [SeedService],
 })

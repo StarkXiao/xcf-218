@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, In } from 'typeorm';
 import { ApprovalFlow } from '../../entities/approval-flow.entity';
@@ -10,6 +10,7 @@ import { Application } from '../../entities/application.entity';
 import { User } from '../../entities/user.entity';
 import { Message } from '../../entities/message.entity';
 import { ProgressRecord } from '../../entities/progress-record.entity';
+import { JointApplicationService } from '../joint-application/joint-application.service';
 
 interface StartApprovalDto {
   applicationId: number;
@@ -52,6 +53,8 @@ export class ApprovalService {
     @InjectRepository(User) private readonly userRepository: Repository<User>,
     @InjectRepository(Message) private readonly messageRepository: Repository<Message>,
     @InjectRepository(ProgressRecord) private readonly progressRepository: Repository<ProgressRecord>,
+    @Inject(forwardRef(() => JointApplicationService))
+    private readonly jointApplicationService: JointApplicationService,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -171,6 +174,11 @@ export class ApprovalService {
       }
 
       await queryRunner.commitTransaction();
+      try {
+        await this.jointApplicationService.syncSubApplicationStatus(dto.applicationId);
+      } catch (e) {
+        // ignore
+      }
       return this.findRecordById(savedRecord.id);
     } catch (error) {
       await queryRunner.rollbackTransaction();
@@ -225,6 +233,11 @@ export class ApprovalService {
       }
 
       await queryRunner.commitTransaction();
+      try {
+        await this.jointApplicationService.syncSubApplicationStatus(record.applicationId);
+      } catch (e) {
+        // ignore
+      }
       return this.findRecordById(record.id);
     } catch (error) {
       await queryRunner.rollbackTransaction();

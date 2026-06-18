@@ -594,3 +594,108 @@ export interface ComplaintStatistics {
   callbackCount: number
   avgSatisfaction: number
 }
+
+export interface JointMaterialInfo {
+  name: string
+  required: boolean
+  fieldName: string
+  isShared?: boolean
+  serviceItemIds?: number[]
+}
+
+export interface JointSubApplicationData {
+  serviceItemId: number
+  formData: Record<string, any>
+  materialsInfo: JointMaterialInfo[]
+  sortOrder?: number
+}
+
+export interface JointSubApplication {
+  id: number
+  jointApplicationId: number
+  serviceItemId: number
+  serviceItem?: ServiceItem
+  applicationId?: number
+  application?: Application
+  splitStatus: string
+  status: string
+  formData?: any
+  reviewComment?: string
+  completedAt?: string
+  sortOrder: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface JointMaterialRelation {
+  id: number
+  jointApplicationId: number
+  materialFileId: number
+  materialFile?: MaterialFile
+  materialName: string
+  fieldName: string
+  isShared: boolean
+  usedByServiceItemIds: number[]
+  usedByApplicationIds: number[]
+  reuseCount?: number
+  createdAt: string
+}
+
+export interface JointApplication {
+  id: number
+  jointApplicationNo: string
+  userId: number
+  user?: User
+  title: string
+  formData: any
+  status: string
+  totalItems: number
+  approvedItems: number
+  rejectedItems: number
+  processingItems: number
+  summary?: string
+  reviewerId?: number
+  reviewComment?: string
+  subApplications: JointSubApplication[]
+  materialRelations?: JointMaterialRelation[]
+  createdAt: string
+  updatedAt: string
+}
+
+export interface JointApprovalSummaryItem {
+  subApplicationId: number
+  applicationId: number
+  applicationNo?: string
+  serviceItemId: number
+  serviceItemName: string
+  status: string
+  reviewComment?: string
+  completedAt?: string
+}
+
+export interface JointApprovalSummary {
+  jointApplicationId: number
+  total: number
+  approved: number
+  rejected: number
+  processing: number
+  pending: number
+  items: JointApprovalSummaryItem[]
+}
+
+export interface JointMaterialStats {
+  jointApplicationId: number
+  totalMaterials: number
+  sharedMaterials: number
+  totalReusedTimes: number
+  savedUploads: number
+  details: Array<{
+    id: number
+    materialName: string
+    fieldName: string
+    isShared: boolean
+    usedByServiceItemIds: number[]
+    usedByApplicationIds: number[]
+    reuseCount: number
+  }>
+}

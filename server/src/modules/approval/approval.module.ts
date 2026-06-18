@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ApprovalFlow } from '../../entities/approval-flow.entity';
 import { ApprovalNode } from '../../entities/approval-node.entity';
