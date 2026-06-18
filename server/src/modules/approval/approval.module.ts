@@ -11,6 +11,7 @@ import { Message } from '../../entities/message.entity';
 import { ProgressRecord } from '../../entities/progress-record.entity';
 import { ApprovalService } from './approval.service';
 import { ApprovalController } from './approval.controller';
+import { JointApplicationModule } from '../joint-application/joint-application.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { ApprovalController } from './approval.controller';
       Message,
       ProgressRecord,
     ]),
+    forwardRef(() => JointApplicationModule),
   ],
   providers: [ApprovalService],
   controllers: [ApprovalController],

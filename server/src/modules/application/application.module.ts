@@ -9,6 +9,7 @@ import { ServiceItem } from '../../entities/service-item.entity';
 import { User } from '../../entities/user.entity';
 import { ApplicationController } from './application.controller';
 import { ApplicationService } from './application.service';
+import { JointApplicationModule } from '../joint-application/joint-application.module';
 import { diskStorage } from 'multer';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -16,6 +17,7 @@ import * as fs from 'fs';
 @Module({
   imports: [
     TypeOrmModule.forFeature([Application, ProgressRecord, Message, MaterialFile, ServiceItem, User]),
+    forwardRef(() => JointApplicationModule),
     MulterModule.register({
       storage: diskStorage({
         destination: (req, file, cb) => {

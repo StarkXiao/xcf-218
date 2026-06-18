@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, In } from 'typeorm';
@@ -43,6 +44,8 @@ export interface CreateJointApplicationData {
 
 @Injectable()
 export class JointApplicationService {
+  private readonly logger = new Logger(JointApplicationService.name);
+
   constructor(
     @InjectRepository(JointApplication)
     private readonly jointAppRepository: Repository<JointApplication>,
@@ -89,6 +92,10 @@ export class JointApplicationService {
     await queryRunner.startTransaction();
 
     try {
+      this.logger.log(
+        `开始创建联合申报: userId=${data.userId}, 事项数=${data.subApplications.length}, 文件数=${data.files.length}`,
+      );
+
       const user = await queryRunner.manager.findOne(User, {
         where: { id: data.userId },
       });
@@ -126,47 +133,49 @@ export class JointApplicationService {
         processingItems: 0,
       });
       const savedJointApp = await queryRunner.manager.save(jointApplication);
+      this.logger.log(`联合申报主表已创建: id=${savedJointApp.id}, no=${jointApplicationNo}`);
 
-      const savedMaterialFiles: Map<string, MaterialFile> = new Map();
-      const materialRelations: JointMaterialRelation[] = [];
+      const uploadedFileMap = new Map<string, {
+        fileData: { fieldName: string; file: Express.Multer.File };
+        materialInfo: MaterialInfo;
+      }>();
 
       for (const fileData of data.files) {
         const materialInfo = this.findMaterialInfo(
           data.subApplications,
           fileData.fieldName,
         );
-        if (!materialInfo) continue;
-
-        const materialFile = queryRunner.manager.create(MaterialFile, {
-          fieldName: fileData.fieldName,
-          materialName: materialInfo.name,
-          originalName: fileData.file.originalname,
-          fileName: fileData.file.filename,
-          filePath: fileData.file.path,
-          fileSize: fileData.file.size,
-          mimeType: fileData.file.mimetype,
-          required: materialInfo.required,
-          version: 1,
-          isCurrent: true,
-          status: 'normal',
-          uploaderId: data.userId,
-        });
-        const savedFile = await queryRunner.manager.save(materialFile);
-        savedMaterialFiles.set(fileData.fieldName, savedFile);
-
-        const isShared = materialInfo.isShared || false;
-        const relation = queryRunner.manager.create(JointMaterialRelation, {
-          jointApplicationId: savedJointApp.id,
-          materialFileId: savedFile.id,
-          materialName: materialInfo.name,
-          fieldName: fileData.fieldName,
-          isShared,
-          usedByServiceItemIds: materialInfo.serviceItemIds || [],
-          usedByApplicationIds: [],
-        });
-        const savedRelation = await queryRunner.manager.save(relation);
-        materialRelations.push(savedRelation);
+        if (!materialInfo) {
+          this.logger.warn(
+            `未找到字段 ${fileData.fieldName} 对应的材料信息，跳过`,
+          );
+          continue;
+        }
+        uploadedFileMap.set(fileData.fieldName, { fileData, materialInfo });
+        this.logger.log(
+          `匹配文件: field=${fileData.fieldName}, name=${materialInfo.name}, shared=${materialInfo.isShared}, serviceItems=${materialInfo.serviceItemIds?.join(',')}`,
+        );
       }
+
+      this.logger.log(`文件匹配完成，共 ${uploadedFileMap.size} 个有效文件`);
+
+      interface FileBlueprint {
+        fieldName: string;
+        materialName: string;
+        required: boolean;
+        originalName: string;
+        fileName: string;
+        filePath: string;
+        fileSize: number;
+        mimeType: string;
+      }
+
+      const savedSubApps: Array<{
+        sub: JointSubApplication;
+        app: Application;
+        serviceItem: ServiceItem | undefined;
+        subData: SubApplicationData;
+      }> = [];
 
       for (let i = 0; i < data.subApplications.length; i++) {
         const subData = data.subApplications[i];
@@ -195,7 +204,7 @@ export class JointApplicationService {
             _jointApplicationId: savedJointApp.id,
             _jointSubApplicationId: savedSubApp.id,
           }),
-          materials: JSON.stringify(subData.materialsInfo),
+          materials: JSON.stringify(subData.materialsInfo || []),
           status: 'submitted',
         });
         const savedApp = await queryRunner.manager.save(application);
@@ -205,81 +214,120 @@ export class JointApplicationService {
         savedSubApp.status = 'submitted';
         await queryRunner.manager.save(savedSubApp);
 
-        for (const matInfo of subData.materialsInfo) {
-          let targetMaterialFile = savedMaterialFiles.get(matInfo.fieldName);
+        savedSubApps.push({ sub: savedSubApp, app: savedApp, serviceItem, subData });
+        this.logger.log(
+          `事项 ${subData.serviceItemId} 拆单完成: subId=${savedSubApp.id}, appId=${savedApp.id}, appNo=${applicationNo}`,
+        );
+      }
 
-          if (!targetMaterialFile && matInfo.isShared) {
-            for (const [fieldName, file] of savedMaterialFiles.entries()) {
-              if (fieldName.startsWith('shared_') || fieldName.includes(matInfo.fieldName)) {
-                targetMaterialFile = file;
-                break;
-              }
-            }
+      this.logger.log(`拆单完成，共 ${savedSubApps.length} 个子申请，开始分配材料...`);
+
+      const jointMaterialRelationRecords: JointMaterialRelation[] = [];
+
+      for (const [fieldName, entry] of uploadedFileMap.entries()) {
+        const { fileData, materialInfo } = entry;
+
+        const relatedServiceItemIds =
+          materialInfo.serviceItemIds?.length > 0
+            ? materialInfo.serviceItemIds
+            : data.subApplications.map(s => s.serviceItemId);
+
+        const sharedBlueprint: FileBlueprint = {
+          fieldName,
+          materialName: materialInfo.name,
+          required: materialInfo.required,
+          originalName: fileData.file.originalname,
+          fileName: fileData.file.filename,
+          filePath: fileData.file.path,
+          fileSize: fileData.file.size,
+          mimeType: fileData.file.mimetype,
+        };
+
+        let firstSavedMaterialFileId: number | null = null;
+        const appliedApplicationIds: number[] = [];
+        const appliedServiceItemIds: number[] = [];
+
+        for (const saved of savedSubApps) {
+          const shouldApply = relatedServiceItemIds.includes(
+            saved.sub.serviceItemId,
+          );
+          if (!shouldApply) continue;
+
+          const matForSub = (saved.subData.materialsInfo || []).find(
+            m => m.fieldName === fieldName,
+          );
+          const matName =
+            matForSub?.name || sharedBlueprint.materialName;
+          const matRequired =
+            matForSub?.required ?? sharedBlueprint.required;
+
+          const materialFile = queryRunner.manager.create(MaterialFile, {
+            applicationId: saved.app.id,
+            fieldName: sharedBlueprint.fieldName,
+            materialName: matName,
+            originalName: sharedBlueprint.originalName,
+            fileName: sharedBlueprint.fileName,
+            filePath: sharedBlueprint.filePath,
+            fileSize: sharedBlueprint.fileSize,
+            mimeType: sharedBlueprint.mimeType,
+            required: matRequired,
+            version: 1,
+            isCurrent: true,
+            status: 'normal',
+            uploaderId: data.userId,
+          });
+          const savedMaterialFile =
+            await queryRunner.manager.save(materialFile);
+
+          if (!firstSavedMaterialFileId) {
+            firstSavedMaterialFileId = savedMaterialFile.id;
+          }
+          appliedApplicationIds.push(saved.app.id);
+          if (!appliedServiceItemIds.includes(saved.sub.serviceItemId)) {
+            appliedServiceItemIds.push(saved.sub.serviceItemId);
           }
 
-          if (targetMaterialFile) {
-            const clonedMaterialFile = queryRunner.manager.create(MaterialFile, {
-              applicationId: savedApp.id,
-              fieldName: matInfo.fieldName,
-              materialName: matInfo.name,
-              originalName: targetMaterialFile.originalName,
-              fileName: targetMaterialFile.fileName,
-              filePath: targetMaterialFile.filePath,
-              fileSize: targetMaterialFile.fileSize,
-              mimeType: targetMaterialFile.mimeType,
-              required: matInfo.required,
-              version: 1,
-              isCurrent: true,
-              status: 'normal',
-              uploaderId: data.userId,
-            });
-            const clonedFile = await queryRunner.manager.save(clonedMaterialFile);
-
-            const relation = materialRelations.find(
-              r => r.materialFileId === targetMaterialFile!.id,
-            );
-            if (relation) {
-              if (!relation.usedByServiceItemIds) {
-                relation.usedByServiceItemIds = [];
-              }
-              if (!relation.usedByServiceItemIds.includes(subData.serviceItemId)) {
-                relation.usedByServiceItemIds.push(subData.serviceItemId);
-              }
-              if (!relation.usedByApplicationIds) {
-                relation.usedByApplicationIds = [];
-              }
-              if (!relation.usedByApplicationIds.includes(savedApp.id)) {
-                relation.usedByApplicationIds.push(savedApp.id);
-              }
-              await queryRunner.manager.save(relation);
-            }
-          }
+          this.logger.log(
+            `  材料落库: field=${fieldName}, appId=${saved.app.id}, matFileId=${savedMaterialFile.id}, item=${saved.sub.serviceItemId}`,
+          );
         }
 
+        if (firstSavedMaterialFileId !== null) {
+          const relation = queryRunner.manager.create(JointMaterialRelation, {
+            jointApplicationId: savedJointApp.id,
+            materialFileId: firstSavedMaterialFileId,
+            materialName: sharedBlueprint.materialName,
+            fieldName,
+            isShared: materialInfo.isShared || relatedServiceItemIds.length > 1,
+            usedByServiceItemIds: appliedServiceItemIds,
+            usedByApplicationIds: appliedApplicationIds,
+          });
+          const savedRelation = await queryRunner.manager.save(relation);
+          jointMaterialRelationRecords.push(savedRelation);
+
+          this.logger.log(
+            `  材料关系记录: field=${fieldName}, shared=${relation.isShared}, items=${appliedServiceItemIds.join(',')}, apps=${appliedApplicationIds.join(',')}`,
+          );
+        }
+      }
+
+      for (const saved of savedSubApps) {
         await queryRunner.manager.save(ProgressRecord, {
-          applicationId: savedApp.id,
+          applicationId: saved.app.id,
           step: '联合申报拆单',
           status: 'completed',
-          remark: `从联合申报（${jointApplicationNo}）拆单生成，事项：${serviceItem?.name}`,
+          remark: `从联合申报（${jointApplicationNo}）拆单生成，事项：${saved.serviceItem?.name}`,
           operatorId: data.userId,
         });
 
         await queryRunner.manager.save(ProgressRecord, {
-          applicationId: savedApp.id,
+          applicationId: saved.app.id,
           step: '提交申请',
           status: 'completed',
           remark: '用户已成功提交申请材料（联合申报）',
           operatorId: data.userId,
         });
       }
-
-      await queryRunner.manager.save(ProgressRecord, {
-        applicationId: 0,
-        step: '联合申报提交',
-        status: 'completed',
-        remark: `联合申报提交成功，共 ${data.subApplications.length} 个事项`,
-        operatorId: data.userId,
-      });
 
       await queryRunner.manager.save(Message, {
         userId: data.userId,
@@ -291,8 +339,12 @@ export class JointApplicationService {
       await this.updateJointAppStatus(savedJointApp.id, queryRunner.manager);
 
       await queryRunner.commitTransaction();
+      this.logger.log(
+        `联合申报创建成功: jointAppId=${savedJointApp.id}, 子申请=${savedSubApps.length}, 材料关系=${jointMaterialRelationRecords.length}`,
+      );
       return this.findOne(savedJointApp.id);
     } catch (error) {
+      this.logger.error(`联合申报创建失败: ${(error as Error).message}`, (error as Error).stack);
       await queryRunner.rollbackTransaction();
       throw error;
     } finally {
@@ -306,12 +358,22 @@ export class JointApplicationService {
   ): MaterialInfo | null {
     for (const sub of subApplications) {
       const found = sub.materialsInfo?.find(m => m.fieldName === fieldName);
-      if (found) return found;
-    }
-    const sharedFieldName = fieldName.replace(/^shared_/, '');
-    for (const sub of subApplications) {
-      const found = sub.materialsInfo?.find(m => m.fieldName === sharedFieldName);
-      if (found) return { ...found, isShared: true };
+      if (found) {
+        const relatedItems = subApplications
+          .filter(s => s.materialsInfo?.some(m => m.fieldName === fieldName))
+          .map(s => s.serviceItemId);
+
+        const isShared = found.isShared || relatedItems.length > 1;
+        const allItemIds = isShared
+          ? relatedItems
+          : (found.serviceItemIds?.length ? found.serviceItemIds : [sub.serviceItemId]);
+
+        return {
+          ...found,
+          isShared,
+          serviceItemIds: allItemIds,
+        };
+      }
     }
     return null;
   }

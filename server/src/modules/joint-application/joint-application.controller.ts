@@ -9,8 +9,9 @@ import {
   UseInterceptors,
   UploadedFiles,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
-import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import { AnyFilesInterceptor } from '@nestjs/platform-express';
 import { JointApplicationService } from './joint-application.service';
 import { diskStorage } from 'multer';
 import * as path from 'path';
@@ -23,6 +24,7 @@ if (!fs.existsSync(uploadDir)) {
 
 @Controller('joint-applications')
 export class JointApplicationController {
+  private readonly logger = new Logger(JointApplicationController.name);
   constructor(private readonly service: JointApplicationService) {}
 
   @Get('available-items')
@@ -32,7 +34,7 @@ export class JointApplicationController {
 
   @Post()
   @UseInterceptors(
-    FileFieldsInterceptor([], {
+    AnyFilesInterceptor({
       storage: diskStorage({
         destination: uploadDir,
         filename: (_req, file, cb) => {
@@ -46,9 +48,18 @@ export class JointApplicationController {
     }),
   )
   async create(
-    @UploadedFiles() files: Record<string, Express.Multer.File[]>,
+    @UploadedFiles() files: Express.Multer.File[],
     @Body() body: any,
   ) {
+    this.logger.log(
+      `收到联合申报提交，文件数量: ${files?.length || 0}, body keys: ${Object.keys(body).join(', ')}`,
+    );
+    files?.forEach(f =>
+      this.logger.debug(
+        `  文件: field=${f.fieldname}, name=${f.originalname}, size=${f.size}, path=${f.path}`,
+      ),
+    );
+
     const userId = Number(body.userId);
     const title = body.title;
     const formData = body.formData ? JSON.parse(body.formData) : {};
@@ -62,15 +73,12 @@ export class JointApplicationController {
 
     const fileList: Array<{ fieldName: string; file: Express.Multer.File }> =
       [];
-    if (files) {
-      for (const [fieldName, fileArr] of Object.entries(files)) {
-        if (fileArr && fileArr.length > 0) {
-          for (const file of fileArr) {
-            fileList.push({ fieldName, file });
-          }
-        }
+    if (files && files.length > 0) {
+      for (const file of files) {
+        fileList.push({ fieldName: file.fieldname, file });
       }
     }
+    this.logger.log(`解析后的文件列表: ${fileList.map(f => f.fieldName).join(', ')}`);
 
     return this.service.create({
       userId,
