@@ -51,9 +51,11 @@ export class ComplaintService {
     return this.findOne(saved.id);
   }
 
-  async findByUserId(userId: number) {
+  async findByUserId(userId: number, status?: string) {
+    const where: any = { userId };
+    if (status) where.status = status;
     const complaints = await this.complaintRepository.find({
-      where: { userId },
+      where,
       relations: ['serviceItem', 'application', 'callbacks', 'callbacks.admin'],
       order: { createdAt: 'DESC' },
     });

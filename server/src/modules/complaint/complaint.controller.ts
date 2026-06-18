@@ -12,7 +12,7 @@ export class ComplaintController {
 
   @Get()
   findAll(@Query('userId') userId?: string, @Query('status') status?: string, @Query('type') type?: string) {
-    if (userId) return this.service.findByUserId(+userId);
+    if (userId) return this.service.findByUserId(+userId, status);
     return this.service.findAll(status, type);
   }
 

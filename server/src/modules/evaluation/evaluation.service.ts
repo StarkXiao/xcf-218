@@ -104,18 +104,24 @@ export class EvaluationService {
 
     const totalCount = await qb.getCount();
 
-    const avgResult = await this.evalRepository
+    const avgQb = this.evalRepository
       .createQueryBuilder('e')
-      .select('AVG(e.rating)', 'avgRating')
-      .getRawOne();
+      .select('AVG(e.rating)', 'avgRating');
+    if (serviceItemId) {
+      avgQb.where('e.serviceItemId = :serviceItemId', { serviceItemId });
+    }
+    const avgResult = await avgQb.getRawOne();
     const avgRating = parseFloat((avgResult?.avgRating || 0).toFixed(1));
 
-    const ratingDist = await this.evalRepository
+    const ratingDistQb = this.evalRepository
       .createQueryBuilder('e')
       .select('e.rating', 'rating')
       .addSelect('COUNT(*)', 'count')
-      .groupBy('e.rating')
-      .getRawMany();
+      .groupBy('e.rating');
+    if (serviceItemId) {
+      ratingDistQb.where('e.serviceItemId = :serviceItemId', { serviceItemId });
+    }
+    const ratingDist = await ratingDistQb.getRawMany();
 
     const ratingDistribution: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
     for (const row of ratingDist) {
