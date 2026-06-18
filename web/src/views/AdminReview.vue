@@ -99,6 +99,14 @@
 
           <div v-if="canReview" class="content-section">
             <h3 class="section-title">审核操作</h3>
+            <el-alert
+              v-if="currentApproverId"
+              :title="`当前待办人：${currentApproverName}`"
+              :type="isCurrentApprover ? 'success' : 'warning'"
+              show-icon
+              style="margin-bottom: 16px"
+              :description="isCurrentApprover ? '您是当前审批待办人，可进行审批操作' : '您不是当前审批待办人，无法进行审批操作'"
+            />
             <el-form :model="reviewForm" label-width="100px">
               <el-form-item label="审核意见">
                 <el-input
@@ -106,6 +114,7 @@
                   type="textarea"
                   :rows="3"
                   placeholder="请输入审核意见（选填）"
+                  :disabled="!isCurrentApprover"
                 />
               </el-form-item>
               <el-form-item>
@@ -113,20 +122,20 @@
                   type="warning"
                   :loading="submitting"
                   @click="doReview('reviewing')"
-                  :disabled="application.status === 'reviewing'"
+                  :disabled="application.status === 'reviewing' || !isCurrentApprover"
                 >
                   开始审核
                 </el-button>
-                <el-button type="success" :loading="submitting" @click="doReview('approve')">
+                <el-button type="success" :loading="submitting" @click="doReview('approve')" :disabled="!isCurrentApprover">
                   <el-icon><CircleCheck /></el-icon> 审核通过
                 </el-button>
-                <el-button type="danger" :loading="submitting" @click="doReview('reject')">
+                <el-button type="danger" :loading="submitting" @click="doReview('reject')" :disabled="!isCurrentApprover">
                   <el-icon><CircleClose /></el-icon> 驳回申请
                 </el-button>
-                <el-button type="warning" :loading="submitting" @click="openRejectDialog">
+                <el-button type="warning" :loading="submitting" @click="openRejectDialog" :disabled="!isCurrentApprover">
                   <el-icon><Refresh /></el-icon> 退回材料
                 </el-button>
-                <el-button type="primary" :loading="submitting" @click="doReview('complete')">
+                <el-button type="primary" :loading="submitting" @click="doReview('complete')" :disabled="!isCurrentApprover">
                   <el-icon><Finished /></el-icon> 办理完成
                 </el-button>
               </el-form-item>
@@ -265,8 +274,9 @@ import { ArrowLeft, CircleCheck, CircleClose, Finished, Refresh, Document } from
 import { useUserStore } from '@/stores/user'
 import { getApplicationById, downloadMaterial, previewMaterial } from '@/api/application'
 import { reviewApplication } from '@/api/admin'
+import { approvalApi } from '@/api/approval'
 import { getMaterialVersions, rejectMaterials } from '@/api/supplement-center'
-import type { Application, MaterialFile } from '@/types'
+import type { Application, MaterialFile, ApprovalRecord } from '@/types'
 import dayjs from 'dayjs'
 
 const route = useRoute()
@@ -293,6 +303,25 @@ const rejectForm = reactive({
 
 const reviewForm = reactive({
   comment: '',
+})
+
+const approvalRecords = ref<ApprovalRecord[]>([])
+const currentApproverId = computed(() => {
+  const pending = approvalRecords.value.find(r => r.status === 'pending')
+  return pending?.approverId
+})
+
+const currentApproverName = computed(() => {
+  const pending = approvalRecords.value.find(r => r.status === 'pending')
+  return pending?.approver?.name || '未指派'
+})
+
+const isCurrentApprover = computed(() => {
+  if (!userStore.user) return false
+  if (!currentApproverId.value) {
+    return canReview.value
+  }
+  return userStore.user.id === currentApproverId.value
 })
 
 const canReview = computed(() => {
@@ -345,6 +374,11 @@ const loadData = async () => {
   loading.value = true
   try {
     application.value = await getApplicationById(Number(route.params.id))
+    try {
+      approvalRecords.value = await approvalApi.getRecordsByApplication(Number(route.params.id))
+    } catch {
+      approvalRecords.value = []
+    }
   } finally {
     loading.value = false
   }

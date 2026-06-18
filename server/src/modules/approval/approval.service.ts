@@ -188,10 +188,28 @@ export class ApprovalService {
     try {
       const record = await queryRunner.manager.findOne(ApprovalRecord, {
         where: { id: dto.recordId },
-        relations: ['currentNode', 'application', 'application.serviceItem'],
+        relations: ['currentNode', 'approver', 'application', 'application.serviceItem'],
       });
       if (!record) throw new NotFoundException('审批记录不存在');
       if (record.status !== 'pending') throw new BadRequestException('该审批已处理');
+
+      if (record.approverId && record.approverId !== dto.approverId) {
+        const assignedApprover = record.approver;
+        throw new ForbiddenException(
+          `当前审批已指派给「${assignedApprover?.name || '其他人员'}」处理，您无权操作`,
+        );
+      }
+
+      if (!record.approverId) {
+        const node = record.currentNode;
+        const currentUser = await this.userRepository.findOne({ where: { id: dto.approverId } });
+        if (!currentUser) throw new NotFoundException('操作人不存在');
+        if (currentUser.role !== node.role) {
+          throw new ForbiddenException(
+            `当前节点要求「${node.role}」角色审批，您的角色为「${currentUser.role}」，无权操作`,
+          );
+        }
+      }
 
       const flow = await this.findFlowById(record.flowId);
       const currentNode = record.currentNode;

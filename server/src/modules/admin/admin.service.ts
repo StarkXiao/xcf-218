@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Application } from '../../entities/application.entity';
@@ -6,6 +6,7 @@ import { ProgressRecord } from '../../entities/progress-record.entity';
 import { Message } from '../../entities/message.entity';
 import { ServiceItem } from '../../entities/service-item.entity';
 import { User } from '../../entities/user.entity';
+import { ApprovalRecord } from '../../entities/approval-record.entity';
 import { CertificateService } from '../certificate/certificate.service';
 
 @Injectable()
@@ -16,6 +17,7 @@ export class AdminService {
     @InjectRepository(Message) private readonly messageRepository: Repository<Message>,
     @InjectRepository(ServiceItem) private readonly itemRepository: Repository<ServiceItem>,
     @InjectRepository(User) private readonly userRepository: Repository<User>,
+    @InjectRepository(ApprovalRecord) private readonly approvalRecordRepository: Repository<ApprovalRecord>,
     private readonly certificateService: CertificateService,
   ) {}
 
@@ -51,6 +53,30 @@ export class AdminService {
   ) {
     const app = await this.appRepository.findOne({ where: { id } });
     if (!app) throw new Error('申请不存在');
+
+    const pendingApprovalRecord = await this.approvalRecordRepository.findOne({
+      where: { applicationId: id, status: 'pending' },
+      relations: ['approver', 'currentNode'],
+    });
+
+    if (pendingApprovalRecord) {
+      if (pendingApprovalRecord.approverId && pendingApprovalRecord.approverId !== reviewerId) {
+        const assignedName = pendingApprovalRecord.approver?.name || '其他人员';
+        throw new ForbiddenException(
+          `当前审批已指派给「${assignedName}」处理，您无权操作`,
+        );
+      }
+
+      if (!pendingApprovalRecord.approverId) {
+        const reviewer = await this.userRepository.findOne({ where: { id: reviewerId } });
+        const requiredRole = pendingApprovalRecord.currentNode?.role;
+        if (reviewer && requiredRole && reviewer.role !== requiredRole) {
+          throw new ForbiddenException(
+            `当前节点要求「${requiredRole}」角色审批，您的角色为「${reviewer.role}」，无权操作`,
+          );
+        }
+      }
+    }
 
     const statusMap: Record<string, string> = {
       approve: 'approved',
