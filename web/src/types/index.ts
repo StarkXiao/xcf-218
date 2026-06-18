@@ -348,3 +348,89 @@ export interface DisplayCalls {
   waiting: WindowHandling[]
   completed: QueueCall[]
 }
+
+export interface ApprovalFlow {
+  id: number
+  code: string
+  name: string
+  description: string
+  serviceItemId?: number
+  isActive: boolean
+  nodes: ApprovalNode[]
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ApprovalNode {
+  id: number
+  flowId: number
+  nodeName: string
+  nodeOrder: number
+  role: string
+  department?: string
+  description?: string
+  allowReject: boolean
+  allowTransfer: boolean
+  isFinal: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ApprovalRecord {
+  id: number
+  applicationId: number
+  application?: Application
+  flowId: number
+  currentNodeId: number
+  currentNode?: ApprovalNode
+  approverId?: number
+  approver?: User
+  status: 'pending' | 'approved' | 'rejected' | 'transferred' | 'withdrawn'
+  comment?: string
+  approvedAt?: string
+  comments?: ApprovalComment[]
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ApprovalComment {
+  id: number
+  recordId: number
+  nodeId: number
+  node?: ApprovalNode
+  commenterId: number
+  commenter?: User
+  action: 'approve' | 'reject' | 'transfer' | 'withdraw' | 'comment'
+  content: string
+  targetNodeId?: number
+  transferredToUserId?: number
+  createdAt: string
+}
+
+export interface ApprovalTimelineNode {
+  nodeId: number
+  nodeName: string
+  nodeOrder: number
+  role: string
+  department?: string
+  status: 'pending' | 'current' | 'completed' | 'rejected' | 'skipped'
+  approver?: { id: number; name: string }
+  approvedAt?: string
+  comment?: string
+  createdAt?: string
+}
+
+export interface ApprovalCommentSummary {
+  id: number
+  nodeName: string
+  commenterName: string
+  action: string
+  content: string
+  createdAt: string
+}
+
+export interface RejectableNode {
+  nodeId: number
+  nodeName: string
+  nodeOrder: number
+}

@@ -186,6 +186,18 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/AdminQueueDisplay.vue'),
         meta: { title: '叫号大屏', admin: true },
       },
+      {
+        path: 'approvals/pending',
+        name: 'MyPendingApprovals',
+        component: () => import('@/views/MyPendingApprovals.vue'),
+        meta: { title: '待办审批' },
+      },
+      {
+        path: 'approvals/:applicationId',
+        name: 'ApprovalDetail',
+        component: () => import('@/views/ApprovalDetail.vue'),
+        meta: { title: '审批详情' },
+      },
     ],
   },
 ]

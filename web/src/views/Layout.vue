@@ -57,6 +57,10 @@
             <el-icon><List /></el-icon>
             <span>进度跟踪</span>
           </el-menu-item>
+          <el-menu-item index="/approvals/pending">
+            <el-icon><EditPen /></el-icon>
+            <span>待办审批</span>
+          </el-menu-item>
           <el-menu-item index="/supplement-center">
             <el-icon><Refresh /></el-icon>
             <span>补件中心</span>
@@ -129,6 +133,7 @@ import {
   Setting,
   User,
   ArrowDown,
+  EditPen,
 } from '@element-plus/icons-vue'
 
 const route = useRoute()
@@ -162,6 +167,8 @@ const activeMenu = computed(() => {
   if (route.path.startsWith('/proxy-applications')) return '/my-proxy-applications'
   if (route.path.startsWith('/my-proxy-applications')) return '/my-proxy-applications'
   if (route.path.startsWith('/proxy-relations')) return '/proxy-relations'
+  if (route.path.startsWith('/approvals/pending')) return '/approvals/pending'
+  if (route.path.startsWith('/approvals/')) return '/approvals/pending'
   return route.path
 })
 
