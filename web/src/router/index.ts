@@ -241,6 +241,12 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '材料模板管理', admin: true },
       },
       {
+        path: 'admin/material-preview-rules',
+        name: 'AdminMaterialPreviewRules',
+        component: () => import('@/views/AdminMaterialPreviewRules.vue'),
+        meta: { title: '预审规则配置', admin: true },
+      },
+      {
         path: 'admin/evaluation-dashboard',
         name: 'AdminEvaluationDashboard',
         component: () => import('@/views/AdminEvaluationDashboard.vue'),

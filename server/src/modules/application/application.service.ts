@@ -9,6 +9,7 @@ import { ServiceItem } from '../../entities/service-item.entity';
 import { User } from '../../entities/user.entity';
 import { WithdrawalRecord } from '../../entities/withdrawal-record.entity';
 import { JointApplicationService } from '../joint-application/joint-application.service';
+import { MaterialPreviewService, PreviewResult } from '../material-preview/material-preview.service';
 
 interface MaterialInfo {
   name: string;
@@ -59,6 +60,7 @@ export class ApplicationService {
     @Inject(forwardRef(() => JointApplicationService))
     private readonly jointApplicationService: JointApplicationService,
     private readonly dataSource: DataSource,
+    private readonly materialPreviewService: MaterialPreviewService,
   ) {}
 
   generateApplicationNo() {
@@ -71,20 +73,27 @@ export class ApplicationService {
   }
 
   async create(data: CreateApplicationData) {
+    const item = await this.itemRepository.findOne({ where: { id: data.serviceItemId } });
+    if (!item) {
+      throw new NotFoundException('办事事项不存在');
+    }
+    const user = await this.userRepository.findOne({ where: { id: data.userId } });
+    if (!user) {
+      throw new NotFoundException('用户不存在');
+    }
+
+    const previewResult = await this.validateMaterials(data.serviceItemId, undefined, data.formData, data.materialsInfo, data.files);
+    if (!previewResult.passed) {
+      await this.sendPreviewFailedMessage(data.userId, data.serviceItemId, previewResult, item.name);
+      const errorMessages = previewResult.errors.map(e => e.message).join('；');
+      throw new BadRequestException(`材料预审未通过：${errorMessages}`);
+    }
+
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
-      const item = await this.itemRepository.findOne({ where: { id: data.serviceItemId } });
-      if (!item) {
-        throw new NotFoundException('办事事项不存在');
-      }
-      const user = await this.userRepository.findOne({ where: { id: data.userId } });
-      if (!user) {
-        throw new NotFoundException('用户不存在');
-      }
-
       const applicationNo = this.generateApplicationNo();
       const application = this.appRepository.create({
         applicationNo,
@@ -333,34 +342,62 @@ export class ApplicationService {
   }
 
   async resubmit(data: ResubmitData) {
+    const originalApp = await this.appRepository.findOne({
+      where: { id: data.originalApplicationId },
+      relations: ['serviceItem', 'materialFiles', 'progressRecords'],
+    });
+    if (!originalApp) {
+      throw new NotFoundException('原始申请不存在');
+    }
+
+    if (originalApp.userId !== data.userId) {
+      throw new UnauthorizedException('无权操作此申请');
+    }
+
+    if (originalApp.status !== 'withdrawn' && originalApp.status !== 'rejected') {
+      throw new BadRequestException(
+        `当前状态（${this.getStatusLabel(originalApp.status)}）不允许重新提交。仅"已撤回"或"已驳回"的申请可重新提交`,
+      );
+    }
+
+    if (originalApp.resubmitCount >= 3) {
+      throw new BadRequestException('重新提交次数已达上限（最多3次），请发起新的申请');
+    }
+
+    const item = originalApp.serviceItem;
+    const allFiles = [...data.files];
+    if (data.retainedFileIds && data.retainedFileIds.length > 0) {
+      const retainedFiles = originalApp.materialFiles.filter(f => data.retainedFileIds!.includes(f.id));
+      for (const rf of retainedFiles) {
+        allFiles.push({
+          fieldname: rf.fieldName,
+          originalname: rf.originalName,
+          size: rf.fileSize,
+          mimetype: rf.mimeType,
+          filename: rf.fileName,
+          path: rf.filePath,
+        } as Express.Multer.File);
+      }
+    }
+
+    const previewResult = await this.validateMaterials(
+      data.originalApplicationId,
+      undefined,
+      data.formData,
+      data.materialsInfo,
+      allFiles,
+    );
+    if (!previewResult.passed) {
+      await this.sendPreviewFailedMessage(data.userId, originalApp.serviceItemId, previewResult, item.name);
+      const errorMessages = previewResult.errors.map(e => e.message).join('；');
+      throw new BadRequestException(`材料预审未通过：${errorMessages}`);
+    }
+
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
-      const originalApp = await this.appRepository.findOne({
-        where: { id: data.originalApplicationId },
-        relations: ['serviceItem', 'materialFiles', 'progressRecords'],
-      });
-      if (!originalApp) {
-        throw new NotFoundException('原始申请不存在');
-      }
-
-      if (originalApp.userId !== data.userId) {
-        throw new UnauthorizedException('无权操作此申请');
-      }
-
-      if (originalApp.status !== 'withdrawn' && originalApp.status !== 'rejected') {
-        throw new BadRequestException(
-          `当前状态（${this.getStatusLabel(originalApp.status)}）不允许重新提交。仅"已撤回"或"已驳回"的申请可重新提交`,
-        );
-      }
-
-      if (originalApp.resubmitCount >= 3) {
-        throw new BadRequestException('重新提交次数已达上限（最多3次），请发起新的申请');
-      }
-
-      const item = originalApp.serviceItem;
       const applicationNo = this.generateApplicationNo();
 
       const approvedWithdrawal = await this.withdrawalRepository.findOne({
@@ -694,5 +731,68 @@ export class ApplicationService {
     }
 
     return this.findOne(id);
+  }
+
+  private async validateMaterials(
+    serviceItemId: number,
+    materialTemplateId: number | undefined,
+    formData: any,
+    materialsInfo: MaterialInfo[],
+    files: Express.Multer.File[],
+  ): Promise<PreviewResult> {
+    const uploadedFiles = files.map(file => ({
+      fieldName: file.fieldname,
+      originalName: file.originalname,
+      size: file.size,
+      mimeType: file.mimetype,
+    }));
+
+    return this.materialPreviewService.preview({
+      serviceItemId,
+      materialTemplateId,
+      formData: formData || {},
+      uploadedFiles,
+      materialsInfo,
+    });
+  }
+
+  private async sendPreviewFailedMessage(
+    userId: number,
+    serviceItemId: number,
+    previewResult: PreviewResult,
+    serviceItemName: string,
+  ) {
+    const missingList = previewResult.missingMaterials.map(m => `- ${m.fieldLabel}`).join('\n');
+    const invalidList = previewResult.errors
+      .filter(e => e.errorType !== 'missing')
+      .map(e => `- ${e.fieldLabel}：${e.message}`)
+      .join('\n');
+
+    let content = `您提交的「${serviceItemName}」申请材料预审未通过。\n\n`;
+    if (previewResult.missingMaterials.length > 0) {
+      content += `缺少以下必需材料：\n${missingList}\n\n`;
+    }
+    if (previewResult.errors.filter(e => e.errorType !== 'missing').length > 0) {
+      content += `以下材料不符合要求：\n${invalidList}\n\n`;
+    }
+    content += `请补充和修正后重新提交。`;
+
+    await this.messageRepository.save({
+      userId,
+      title: '申请材料预审未通过',
+      content,
+      type: 'system',
+      serviceItemId,
+    });
+  }
+
+  async previewApplication(
+    serviceItemId: number,
+    materialTemplateId: number | undefined,
+    formData: any,
+    materialsInfo: MaterialInfo[],
+    files: Express.Multer.File[],
+  ): Promise<PreviewResult> {
+    return this.validateMaterials(serviceItemId, materialTemplateId, formData, materialsInfo, files);
   }
 }

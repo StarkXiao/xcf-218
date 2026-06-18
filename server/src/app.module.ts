@@ -39,6 +39,8 @@ import { CrossRegionApplication } from './entities/cross-region-application.enti
 import { CrossRegionDepartment } from './entities/cross-region-department.entity';
 import { CrossRegionProgressShare } from './entities/cross-region-progress-share.entity';
 import { CrossRegionMessageLog } from './entities/cross-region-message-log.entity';
+import { MaterialPreviewRule } from './entities/material-preview-rule.entity';
+import { MaterialPreviewModule } from './modules/material-preview/material-preview.module';
 import { UserModule } from './modules/user/user.module';
 import { HighFrequencyModule } from './modules/high-frequency/high-frequency.module';
 import { ExportArchiveModule } from './modules/export-archive/export-archive.module';
@@ -76,13 +78,13 @@ import * as path from 'path';
       username: 'root',
       password: 'root123456',
       database: 'government_service',
-      entities: [User, ServiceItem, Application, ProgressRecord, Message, MaterialFile, Schedule, Appointment, SupplementRecord, ProxyApplication, ProxyProgressRecord, ProxyRelation, Favorite, Subscription, Certificate, CertificateDownloadRecord, WindowHandling, QueueCall, ApprovalFlow, ApprovalNode, ApprovalRecord, ApprovalComment, ApprovalHistory, MaterialTemplate, Evaluation, Complaint, Callback, CertificateReminder, JointApplication, JointSubApplication, JointMaterialRelation, HotCategory, HotItem, WithdrawalRecord, ExportArchive, CrossRegionApplication, CrossRegionDepartment, CrossRegionProgressShare, CrossRegionMessageLog],
+      entities: [User, ServiceItem, Application, ProgressRecord, Message, MaterialFile, Schedule, Appointment, SupplementRecord, ProxyApplication, ProxyProgressRecord, ProxyRelation, Favorite, Subscription, Certificate, CertificateDownloadRecord, WindowHandling, QueueCall, ApprovalFlow, ApprovalNode, ApprovalRecord, ApprovalComment, ApprovalHistory, MaterialTemplate, Evaluation, Complaint, Callback, CertificateReminder, JointApplication, JointSubApplication, JointMaterialRelation, HotCategory, HotItem, WithdrawalRecord, ExportArchive, CrossRegionApplication, CrossRegionDepartment, CrossRegionProgressShare, CrossRegionMessageLog, MaterialPreviewRule],
       synchronize: true,
       logging: false,
       charset: 'utf8mb4',
       timezone: '+08:00',
     }),
-    TypeOrmModule.forFeature([User, ServiceItem, Application, ProgressRecord, Message, MaterialFile, Schedule, Appointment, SupplementRecord, ProxyApplication, ProxyProgressRecord, ProxyRelation, Favorite, Subscription, Certificate, CertificateDownloadRecord, WindowHandling, QueueCall, ApprovalFlow, ApprovalNode, ApprovalRecord, ApprovalComment, ApprovalHistory, MaterialTemplate, Evaluation, Complaint, Callback, CertificateReminder, JointApplication, JointSubApplication, JointMaterialRelation, HotCategory, HotItem, WithdrawalRecord, ExportArchive, CrossRegionApplication, CrossRegionDepartment, CrossRegionProgressShare, CrossRegionMessageLog]),
+    TypeOrmModule.forFeature([User, ServiceItem, Application, ProgressRecord, Message, MaterialFile, Schedule, Appointment, SupplementRecord, ProxyApplication, ProxyProgressRecord, ProxyRelation, Favorite, Subscription, Certificate, CertificateDownloadRecord, WindowHandling, QueueCall, ApprovalFlow, ApprovalNode, ApprovalRecord, ApprovalComment, ApprovalHistory, MaterialTemplate, Evaluation, Complaint, Callback, CertificateReminder, JointApplication, JointSubApplication, JointMaterialRelation, HotCategory, HotItem, WithdrawalRecord, ExportArchive, CrossRegionApplication, CrossRegionDepartment, CrossRegionProgressShare, CrossRegionMessageLog, MaterialPreviewRule]),
     UserModule,
     ServiceItemModule,
     ApplicationModule,
@@ -107,6 +109,7 @@ import * as path from 'path';
     HighFrequencyModule,
     ExportArchiveModule,
     CrossRegionModule,
+    MaterialPreviewModule,
   ],
   providers: [SeedService],
 })

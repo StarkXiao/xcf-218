@@ -11,6 +11,7 @@ import { WithdrawalRecord } from '../../entities/withdrawal-record.entity';
 import { ApplicationController } from './application.controller';
 import { ApplicationService } from './application.service';
 import { JointApplicationModule } from '../joint-application/joint-application.module';
+import { MaterialPreviewModule } from '../material-preview/material-preview.module';
 import { diskStorage } from 'multer';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -19,6 +20,7 @@ import * as fs from 'fs';
   imports: [
     TypeOrmModule.forFeature([Application, ProgressRecord, Message, MaterialFile, ServiceItem, User, WithdrawalRecord]),
     forwardRef(() => JointApplicationModule),
+    MaterialPreviewModule,
     MulterModule.register({
       storage: diskStorage({
         destination: (req, file, cb) => {

@@ -120,6 +120,26 @@ export class ApplicationController {
     return this.service.findOne(+id);
   }
 
+  @Post('preview')
+  @UseInterceptors(AnyFilesInterceptor())
+  preview(
+    @UploadedFiles() files: Express.Multer.File[],
+    @Body() body: {
+      serviceItemId: string;
+      materialTemplateId?: string;
+      formData: string;
+      materialsInfo: string;
+    },
+  ) {
+    return this.service.previewApplication(
+      Number(body.serviceItemId),
+      body.materialTemplateId ? Number(body.materialTemplateId) : undefined,
+      JSON.parse(body.formData),
+      JSON.parse(body.materialsInfo || '[]'),
+      files,
+    );
+  }
+
   @Put(':id/status')
   updateStatus(
     @Param('id') id: string,

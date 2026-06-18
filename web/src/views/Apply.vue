@@ -166,11 +166,76 @@
         </template>
 
         <el-form-item>
+          <el-button type="success" size="large" :loading="previewing" @click="handlePreview" style="margin-right: 12px">
+            <el-icon><Search /></el-icon>
+            材料预审
+          </el-button>
           <el-button type="primary" size="large" :loading="submitting" @click="handleSubmit">
             提交申请
           </el-button>
           <el-button size="large" @click="$router.back()">取消</el-button>
         </el-form-item>
+
+        <el-dialog
+          v-model="showPreviewDialog"
+          title="材料预审结果"
+          width="600px"
+          :close-on-click-modal="false"
+        >
+          <div v-if="previewResult">
+            <el-alert
+              :title="previewResult.summary"
+              :type="previewResult.passed ? 'success' : 'error'"
+              :closable="false"
+              show-icon
+              style="margin-bottom: 20px"
+            />
+
+            <div v-if="previewResult.missingMaterials.length > 0" class="preview-section">
+              <h4 class="preview-section-title">
+                <el-icon color="#f56c6c"><Warning /></el-icon>
+                缺少必需材料
+              </h4>
+              <ul class="error-list">
+                <li v-for="error in previewResult.missingMaterials" :key="error.fieldName" class="error-item">
+                  <el-tag type="danger" size="small" style="margin-right: 8px">缺失</el-tag>
+                  {{ error.message }}
+                </li>
+              </ul>
+            </div>
+
+            <div v-if="previewResult.errors.filter(e => e.errorType !== 'missing').length > 0" class="preview-section">
+              <h4 class="preview-section-title">
+                <el-icon color="#e6a23c"><Warning /></el-icon>
+                不符合要求的材料
+              </h4>
+              <ul class="error-list">
+                <li
+                  v-for="error in previewResult.errors.filter(e => e.errorType !== 'missing')"
+                  :key="error.fieldName"
+                  class="error-item"
+                >
+                  <el-tag :type="error.severity === 'warning' ? 'warning' : 'danger'" size="small" style="margin-right: 8px">
+                    {{ getErrorTypeLabel(error.errorType) }}
+                  </el-tag>
+                  {{ error.message }}
+                </li>
+              </ul>
+            </div>
+
+            <div v-if="previewResult.passed" class="preview-success">
+              <el-icon color="#67c23a"><CircleCheck /></el-icon>
+              <span>所有材料均符合要求，可以提交申请</span>
+            </div>
+          </div>
+
+          <template #footer>
+            <el-button @click="showPreviewDialog = false">关闭</el-button>
+            <el-button v-if="previewResult?.passed" type="primary" @click="handleSubmitFromPreview">
+              立即提交
+            </el-button>
+          </template>
+        </el-dialog>
       </el-form>
     </el-card>
   </div>
@@ -180,13 +245,13 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, type FormInstance, type FormRules, type UploadFile } from 'element-plus'
-import { Upload } from '@element-plus/icons-vue'
+import { Upload, Search, Warning, CircleCheck } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 import { getServiceItemById } from '@/api/service-item'
 import { getCurrentTemplate } from '@/api/material-template'
-import { createApplication } from '@/api/application'
+import { createApplication, previewApplication, type PreviewResult } from '@/api/application'
 import { linkAppointmentApplication } from '@/api/appointment'
-import type { ServiceItem, TemplateFieldDef, MaterialTemplate } from '@/types'
+import type { ServiceItem, TemplateFieldDef, MaterialTemplate, ValidationError } from '@/types'
 
 const route = useRoute()
 const router = useRouter()
@@ -194,6 +259,7 @@ const userStore = useUserStore()
 
 const loading = ref(false)
 const submitting = ref(false)
+const previewing = ref(false)
 const item = ref<ServiceItem | null>(null)
 const formRef = ref<FormInstance>()
 const materialList = ref<any[]>([])
@@ -203,6 +269,9 @@ const appointmentId = ref<number | null>(null)
 const templateFields = ref<TemplateFieldDef[]>([])
 const currentTemplate = ref<MaterialTemplate | null>(null)
 const uploadedFiles = ref<Record<string, UploadFile[]>>({})
+
+const previewResult = ref<PreviewResult | null>(null)
+const showPreviewDialog = ref(false)
 
 const formData = reactive<Record<string, any>>({
   name: '',
@@ -390,6 +459,117 @@ const loadItem = async () => {
   }
 }
 
+const getErrorTypeLabel = (type: string) => {
+  const labels: Record<string, string> = {
+    missing: '缺失',
+    invalid_type: '格式错误',
+    size_exceeded: '大小超限',
+    pattern_mismatch: '命名不符',
+    custom_rule: '规则不符',
+  }
+  return labels[type] || type
+}
+
+const buildPreviewFormData = () => {
+  if (!userStore.user) return null
+  const formDataObj = new FormData()
+  formDataObj.append('serviceItemId', String(route.params.id))
+  if (currentTemplate.value?.id) {
+    formDataObj.append('materialTemplateId', String(currentTemplate.value.id))
+  }
+
+  const formPayload: Record<string, any> = {
+    name: formData.name,
+    idCard: formData.idCard,
+    phone: formData.phone,
+    address: formData.address,
+    reason: formData.reason,
+  }
+
+  if (templateFields.value.length > 0) {
+    const tplData: Record<string, any> = {}
+    for (const field of templateFields.value) {
+      if (field.type === 'file') continue
+      tplData[field.key] = formData[`tpl_${field.key}`]
+    }
+    formPayload._templateData = tplData
+  }
+
+  formDataObj.append('formData', JSON.stringify(formPayload))
+
+  const materialsInfo: Array<{ name: string; required: boolean; fieldName: string }> = []
+
+  if (templateFields.value.length > 0) {
+    for (const field of templateFields.value) {
+      if (field.type === 'file') {
+        materialsInfo.push({
+          name: field.label,
+          required: field.required,
+          fieldName: `material_tpl_${field.key}`,
+        })
+        const files = uploadedFiles.value[field.key]
+        if (files && files.length > 0 && files[0].raw) {
+          formDataObj.append(`material_tpl_${field.key}`, files[0].raw, files[0].name)
+        }
+      }
+    }
+  } else {
+    materialList.value.forEach((m, i) => {
+      materialsInfo.push({
+        name: m.name,
+        required: m.required,
+        fieldName: `material_${i}`,
+      })
+      const files = legacyUploadedFiles.value[i]
+      if (files && files.length > 0 && files[0].raw) {
+        formDataObj.append(`material_${i}`, files[0].raw, files[0].name)
+      }
+    })
+  }
+
+  formDataObj.append('materialsInfo', JSON.stringify(materialsInfo))
+  return formDataObj
+}
+
+const handlePreview = async () => {
+  if (!formRef.value || !userStore.user) return
+  const valid = await formRef.value.validate().catch(() => false)
+  if (!valid) {
+    ElMessage.warning('请先完整填写表单信息')
+    return
+  }
+
+  const formDataObj = buildPreviewFormData()
+  if (!formDataObj) return
+
+  previewing.value = true
+  try {
+    previewResult.value = await previewApplication(formDataObj)
+    showPreviewDialog.value = true
+
+    if (!previewResult.value.passed) {
+      const missingCount = previewResult.value.missingMaterials.length
+      const errorCount = previewResult.value.totalErrors - missingCount
+      if (missingCount > 0 && errorCount > 0) {
+        ElMessage.error(`预审未通过：缺少 ${missingCount} 份材料，${errorCount} 份材料不符合要求`)
+      } else if (missingCount > 0) {
+        ElMessage.error(`预审未通过：缺少 ${missingCount} 份必需材料`)
+      } else {
+        ElMessage.error(`预审未通过：${errorCount} 份材料不符合要求`)
+      }
+    } else {
+      ElMessage.success('材料预审通过')
+    }
+  } finally {
+    previewing.value = false
+  }
+}
+
+const handleSubmitFromPreview = async () => {
+  showPreviewDialog.value = false
+  await handleSubmit()
+}
+
 const handleSubmit = async () => {
   if (!formRef.value || !userStore.user) return
   const valid = await formRef.value.validate().catch(() => false)
@@ -493,6 +673,55 @@ onMounted(loadItem)
   gap: 6px;
   margin-top: 8px;
   font-size: 13px;
+  color: #67c23a;
+}
+
+.preview-section {
+  margin-bottom: 20px;
+}
+
+.preview-section-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #303133;
+  margin: 0 0 12px 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #ebeef5;
+}
+
+.error-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.error-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  background: #fef0f0;
+  border-radius: 4px;
+  font-size: 13px;
+  color: #f56c6c;
+}
+
+.error-item:last-child {
+  margin-bottom: 0;
+}
+
+.preview-success {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 20px;
+  background: #f0f9eb;
+  border-radius: 4px;
+  font-size: 14px;
   color: #67c23a;
 }
 </style>

@@ -883,3 +883,39 @@ export interface CrossRegionStatistics {
   byRemoteDept: Record<string, number>
   switchCount: number
 }
+
+export interface ValidationError {
+  fieldName: string
+  fieldLabel: string
+  errorType: 'missing' | 'invalid_type' | 'size_exceeded' | 'pattern_mismatch' | 'custom_rule'
+  message: string
+  severity: 'error' | 'warning'
+}
+
+export interface PreviewResult {
+  passed: boolean
+  totalErrors: number
+  totalWarnings: number
+  errors: ValidationError[]
+  missingMaterials: ValidationError[]
+  summary: string
+}
+
+export interface MaterialPreviewRule {
+  id: number
+  serviceItemId: number
+  materialTemplateId?: number
+  fieldName: string
+  fieldLabel: string
+  required: boolean
+  allowedFileTypes: string[]
+  maxFileSize: number
+  validationPattern: string
+  validationMessage: string
+  customRule: string
+  enabled: boolean
+  sortOrder: number
+  createdBy?: number
+  createdAt: string
+  updatedAt: string
+}

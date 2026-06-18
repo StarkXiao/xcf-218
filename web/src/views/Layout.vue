@@ -131,6 +131,7 @@
             <el-menu-item index="/admin/window-coordination">窗口协同办理</el-menu-item>
             <el-menu-item index="/admin/queue-display">叫号大屏</el-menu-item>
             <el-menu-item index="/admin/material-templates">材料模板管理</el-menu-item>
+            <el-menu-item index="/admin/material-preview-rules">预审规则配置</el-menu-item>
             <el-menu-item index="/admin/evaluation-dashboard">评价统计看板</el-menu-item>
             <el-menu-item index="/admin/complaints">投诉处理与回访</el-menu-item>
             <el-menu-item index="/admin/high-frequency">高频事项配置</el-menu-item>

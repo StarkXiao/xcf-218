@@ -178,3 +178,28 @@ export const canResubmit = (applicationId: number, userId: number) => {
     { params: { userId } },
   )
 }
+
+export interface ValidationError {
+  fieldName: string
+  fieldLabel: string
+  errorType: 'missing' | 'invalid_type' | 'size_exceeded' | 'pattern_mismatch' | 'custom_rule'
+  message: string
+  severity: 'error' | 'warning'
+}
+
+export interface PreviewResult {
+  passed: boolean
+  totalErrors: number
+  totalWarnings: number
+  errors: ValidationError[]
+  missingMaterials: ValidationError[]
+  summary: string
+}
+
+export const previewApplication = (formData: FormData) => {
+  return request.post<any, PreviewResult>('/applications/preview', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  })
+}
