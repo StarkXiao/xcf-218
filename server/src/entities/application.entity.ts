@@ -4,6 +4,7 @@ import { ServiceItem } from './service-item.entity';
 import { ProgressRecord } from './progress-record.entity';
 import { MaterialFile } from './material-file.entity';
 import { SupplementRecord } from './supplement-record.entity';
+import { WithdrawalRecord } from './withdrawal-record.entity';
 
 @Entity('applications')
 export class Application {
@@ -42,6 +43,21 @@ export class Application {
   @Column('text', { nullable: true })
   reviewComment: string;
 
+  @Column({ nullable: true })
+  originalApplicationId: number;
+
+  @Column({ default: 0 })
+  withdrawalCount: number;
+
+  @Column({ default: 0 })
+  resubmitCount: number;
+
+  @Column({ nullable: true })
+  lastWithdrawnAt: Date;
+
+  @Column({ default: false })
+  isResubmit: boolean;
+
   @OneToMany(() => ProgressRecord, record => record.application)
   progressRecords: ProgressRecord[];
 
@@ -50,6 +66,9 @@ export class Application {
 
   @OneToMany(() => SupplementRecord, record => record.application)
   supplementRecords: SupplementRecord[];
+
+  @OneToMany(() => WithdrawalRecord, record => record.application)
+  withdrawalRecords: WithdrawalRecord[];
 
   @CreateDateColumn()
   createdAt: Date;

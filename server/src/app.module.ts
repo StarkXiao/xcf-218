@@ -33,6 +33,7 @@ import { JointSubApplication } from './entities/joint-sub-application.entity';
 import { JointMaterialRelation } from './entities/joint-material-relation.entity';
 import { HotCategory } from './entities/hot-category.entity';
 import { HotItem } from './entities/hot-item.entity';
+import { WithdrawalRecord } from './entities/withdrawal-record.entity';
 import { UserModule } from './modules/user/user.module';
 import { HighFrequencyModule } from './modules/high-frequency/high-frequency.module';
 import { CertificateReminderModule } from './modules/certificate-reminder/certificate-reminder.module';
@@ -68,13 +69,13 @@ import * as path from 'path';
       username: 'root',
       password: 'root123456',
       database: 'government_service',
-      entities: [User, ServiceItem, Application, ProgressRecord, Message, MaterialFile, Schedule, Appointment, SupplementRecord, ProxyApplication, ProxyProgressRecord, ProxyRelation, Favorite, Subscription, Certificate, CertificateDownloadRecord, WindowHandling, QueueCall, ApprovalFlow, ApprovalNode, ApprovalRecord, ApprovalComment, ApprovalHistory, MaterialTemplate, Evaluation, Complaint, Callback, CertificateReminder, JointApplication, JointSubApplication, JointMaterialRelation, HotCategory, HotItem],
+      entities: [User, ServiceItem, Application, ProgressRecord, Message, MaterialFile, Schedule, Appointment, SupplementRecord, ProxyApplication, ProxyProgressRecord, ProxyRelation, Favorite, Subscription, Certificate, CertificateDownloadRecord, WindowHandling, QueueCall, ApprovalFlow, ApprovalNode, ApprovalRecord, ApprovalComment, ApprovalHistory, MaterialTemplate, Evaluation, Complaint, Callback, CertificateReminder, JointApplication, JointSubApplication, JointMaterialRelation, HotCategory, HotItem, WithdrawalRecord],
       synchronize: true,
       logging: false,
       charset: 'utf8mb4',
       timezone: '+08:00',
     }),
-    TypeOrmModule.forFeature([User, ServiceItem, Application, ProgressRecord, Message, MaterialFile, Schedule, Appointment, SupplementRecord, ProxyApplication, ProxyProgressRecord, ProxyRelation, Favorite, Subscription, Certificate, CertificateDownloadRecord, WindowHandling, QueueCall, ApprovalFlow, ApprovalNode, ApprovalRecord, ApprovalComment, ApprovalHistory, MaterialTemplate, Evaluation, Complaint, Callback, CertificateReminder, JointApplication, JointSubApplication, JointMaterialRelation, HotCategory, HotItem]),
+    TypeOrmModule.forFeature([User, ServiceItem, Application, ProgressRecord, Message, MaterialFile, Schedule, Appointment, SupplementRecord, ProxyApplication, ProxyProgressRecord, ProxyRelation, Favorite, Subscription, Certificate, CertificateDownloadRecord, WindowHandling, QueueCall, ApprovalFlow, ApprovalNode, ApprovalRecord, ApprovalComment, ApprovalHistory, MaterialTemplate, Evaluation, Complaint, Callback, CertificateReminder, JointApplication, JointSubApplication, JointMaterialRelation, HotCategory, HotItem, WithdrawalRecord]),
     UserModule,
     ServiceItemModule,
     ApplicationModule,

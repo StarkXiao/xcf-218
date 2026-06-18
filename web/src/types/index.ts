@@ -129,6 +129,22 @@ export interface SupplementRecord {
   updatedAt: string
 }
 
+export interface WithdrawalRecord {
+  id: number
+  applicationId: number
+  userId: number
+  user?: User
+  reason: string
+  status: 'pending' | 'approved' | 'rejected'
+  reviewerId?: number
+  reviewComment?: string
+  reviewedAt?: string
+  resubmitCount: number
+  snapshot?: any
+  application?: Application
+  createdAt: string
+}
+
 export interface Application {
   id: number
   applicationNo: string
@@ -140,9 +156,16 @@ export interface Application {
   materials: any[]
   materialFiles: MaterialFile[]
   status: string
+  statusLabel?: string
   reviewerId?: number
   reviewComment?: string
+  originalApplicationId?: number
+  withdrawalCount: number
+  resubmitCount: number
+  lastWithdrawnAt?: string
+  isResubmit: boolean
   progressRecords?: ProgressRecord[]
+  withdrawalRecords?: WithdrawalRecord[]
   createdAt: string
   updatedAt: string
 }

@@ -1,6 +1,41 @@
 import request from '@/utils/request'
 import type { Application } from '@/types'
 
+export interface WithdrawRequest {
+  applicationId: number
+  userId: number
+  reason: string
+}
+
+export interface WithdrawReviewRequest {
+  withdrawalId: number
+  reviewerId: number
+  status: 'approved' | 'rejected'
+  comment?: string
+}
+
+export interface ResubmitRequest {
+  originalApplicationId: number
+  userId: number
+  formData: any
+  materialsInfo: any[]
+  retainedFileIds?: number[]
+}
+
+export interface WithdrawalRecord {
+  id: number
+  applicationId: number
+  userId: number
+  reason: string
+  status: string
+  reviewerId?: number
+  reviewComment?: string
+  reviewedAt?: string
+  resubmitCount: number
+  snapshot?: any
+  createdAt: string
+}
+
 export const applicationApi = {
   createApplication: (formData: FormData) =>
     request.post<any, Application>('/applications', formData, {
@@ -21,6 +56,46 @@ export const applicationApi = {
   downloadMaterial: (fileId: number) => `/api/upload/download/${fileId}`,
 
   previewMaterial: (fileId: number) => `/api/upload/preview/${fileId}`,
+
+  requestWithdraw: (data: WithdrawRequest) =>
+    request.post<any, { success: boolean; withdrawalId: number; message: string }>(
+      '/applications/withdraw',
+      data,
+    ),
+
+  reviewWithdraw: (data: WithdrawReviewRequest) =>
+    request.post<any, { success: boolean; withdrawalId: number; status: string }>(
+      '/applications/withdraw/review',
+      data,
+    ),
+
+  resubmit: (formData: FormData) =>
+    request.post<any, Application>('/applications/resubmit', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    }),
+
+  listPendingWithdrawals: () =>
+    request.get<any, WithdrawalRecord[]>('/applications/withdrawals/pending'),
+
+  getWithdrawalDetail: (id: number) =>
+    request.get<any, WithdrawalRecord>(`/applications/withdrawals/${id}`),
+
+  getWithdrawalRecords: (applicationId: number) =>
+    request.get<any, WithdrawalRecord[]>(`/applications/${applicationId}/withdrawal-records`),
+
+  canWithdraw: (applicationId: number, userId: number) =>
+    request.get<any, { canWithdraw: boolean; reason: string }>(
+      `/applications/${applicationId}/can-withdraw`,
+      { params: { userId } },
+    ),
+
+  canResubmit: (applicationId: number, userId: number) =>
+    request.get<any, { canResubmit: boolean; reason: string }>(
+      `/applications/${applicationId}/can-resubmit`,
+      { params: { userId } },
+    ),
 }
 
 export const createApplication = (formData: FormData) => {
@@ -54,4 +129,52 @@ export const downloadMaterial = (fileId: number) => {
 
 export const previewMaterial = (fileId: number) => {
   return `/api/upload/preview/${fileId}`
+}
+
+export const requestWithdraw = (data: WithdrawRequest) => {
+  return request.post<any, { success: boolean; withdrawalId: number; message: string }>(
+    '/applications/withdraw',
+    data,
+  )
+}
+
+export const reviewWithdraw = (data: WithdrawReviewRequest) => {
+  return request.post<any, { success: boolean; withdrawalId: number; status: string }>(
+    '/applications/withdraw/review',
+    data,
+  )
+}
+
+export const resubmitApplication = (formData: FormData) => {
+  return request.post<any, Application>('/applications/resubmit', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  })
+}
+
+export const listPendingWithdrawals = () => {
+  return request.get<any, WithdrawalRecord[]>('/applications/withdrawals/pending')
+}
+
+export const getWithdrawalDetail = (id: number) => {
+  return request.get<any, WithdrawalRecord>(`/applications/withdrawals/${id}`)
+}
+
+export const getWithdrawalRecords = (applicationId: number) => {
+  return request.get<any, WithdrawalRecord[]>(`/applications/${applicationId}/withdrawal-records`)
+}
+
+export const canWithdraw = (applicationId: number, userId: number) => {
+  return request.get<any, { canWithdraw: boolean; reason: string }>(
+    `/applications/${applicationId}/can-withdraw`,
+    { params: { userId } },
+  )
+}
+
+export const canResubmit = (applicationId: number, userId: number) => {
+  return request.get<any, { canResubmit: boolean; reason: string }>(
+    `/applications/${applicationId}/can-resubmit`,
+    { params: { userId } },
+  )
 }

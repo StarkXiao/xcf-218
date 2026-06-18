@@ -7,6 +7,7 @@ import { Message } from '../../entities/message.entity';
 import { MaterialFile } from '../../entities/material-file.entity';
 import { ServiceItem } from '../../entities/service-item.entity';
 import { User } from '../../entities/user.entity';
+import { WithdrawalRecord } from '../../entities/withdrawal-record.entity';
 import { ApplicationController } from './application.controller';
 import { ApplicationService } from './application.service';
 import { JointApplicationModule } from '../joint-application/joint-application.module';
@@ -16,7 +17,7 @@ import * as fs from 'fs';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Application, ProgressRecord, Message, MaterialFile, ServiceItem, User]),
+    TypeOrmModule.forFeature([Application, ProgressRecord, Message, MaterialFile, ServiceItem, User, WithdrawalRecord]),
     forwardRef(() => JointApplicationModule),
     MulterModule.register({
       storage: diskStorage({
