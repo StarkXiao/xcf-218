@@ -603,13 +603,14 @@ const handleWithdraw = () => {
 }
 
 const doWithdraw = async () => {
-  if (!currentRecord.value) return
+  if (!application.value) return
   try {
-    await approvalApi.withdraw(currentRecord.value.id, {
-      operatorId: currentUser.value!.id,
+    await applicationApi.requestWithdraw({
+      applicationId: applicationId,
+      userId: currentUser.value!.id,
       reason: withdrawReason.value,
     })
-    alert('撤回成功')
+    alert('撤回申请已提交，等待管理员审批')
     withdrawReason.value = ''
     loadData()
   } catch (error: any) {

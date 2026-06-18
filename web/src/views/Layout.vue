@@ -117,6 +117,7 @@
             <el-menu-item index="/admin/schedule">排班管理</el-menu-item>
             <el-menu-item index="/admin/appointments">预约办理</el-menu-item>
             <el-menu-item index="/admin/supplement">补件管理</el-menu-item>
+            <el-menu-item index="/admin/withdrawal-review">撤回审批</el-menu-item>
             <el-menu-item index="/admin/proxy">代办人审核</el-menu-item>
             <el-menu-item index="/admin/certificates">证明管理</el-menu-item>
             <el-menu-item index="/admin/window-coordination">窗口协同办理</el-menu-item>
@@ -184,6 +185,7 @@ const activeMenu = computed(() => {
   if (route.path.startsWith('/admin/schedule')) return '/admin/schedule'
   if (route.path.startsWith('/admin/appointments')) return '/admin/appointments'
   if (route.path.startsWith('/admin/supplement')) return '/admin/supplement'
+  if (route.path.startsWith('/admin/withdrawal-review')) return '/admin/withdrawal-review'
   if (route.path.startsWith('/admin/proxy')) return '/admin/proxy'
   if (route.path.startsWith('/admin/certificates')) return '/admin/certificates'
   if (route.path.startsWith('/admin/window-coordination')) return '/admin/window-coordination'

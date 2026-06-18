@@ -11,6 +11,7 @@ import { User } from '../../entities/user.entity';
 import { Message } from '../../entities/message.entity';
 import { ProgressRecord } from '../../entities/progress-record.entity';
 import { JointApplicationService } from '../joint-application/joint-application.service';
+import { ApplicationService } from '../application/application.service';
 
 interface StartApprovalDto {
   applicationId: number;
@@ -55,6 +56,8 @@ export class ApprovalService {
     @InjectRepository(ProgressRecord) private readonly progressRepository: Repository<ProgressRecord>,
     @Inject(forwardRef(() => JointApplicationService))
     private readonly jointApplicationService: JointApplicationService,
+    @Inject(forwardRef(() => ApplicationService))
+    private readonly applicationService: ApplicationService,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -493,69 +496,24 @@ export class ApprovalService {
   }
 
   async withdraw(recordId: number, operatorId: number, reason: string) {
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
+    const record = await this.recordRepository.findOne({
+      where: { id: recordId },
+      relations: ['application'],
+    });
+    if (!record) throw new NotFoundException('审批记录不存在');
+    if (record.status !== 'pending') throw new BadRequestException('只能撤回待处理的审批');
 
-    try {
-      const record = await queryRunner.manager.findOne(ApprovalRecord, {
-        where: { id: recordId },
-        relations: ['currentNode', 'application'],
-      });
-      if (!record) throw new NotFoundException('审批记录不存在');
-      if (record.status !== 'pending') throw new BadRequestException('只能撤回待处理的审批');
-
-      if (record.application.userId !== operatorId) {
-        throw new ForbiddenException('只有申请人可以撤回审批');
-      }
-
-      record.status = 'withdrawn';
-      record.approverId = operatorId;
-      record.comment = reason;
-      record.approvedAt = new Date();
-      await queryRunner.manager.save(record);
-
-      await queryRunner.manager.save(ApprovalComment, {
-        recordId: record.id,
-        nodeId: record.currentNodeId,
-        commenterId: operatorId,
-        action: 'withdraw',
-        content: reason,
-      });
-
-      await queryRunner.manager.save(ApprovalHistory, {
-        applicationId: record.applicationId,
-        flowId: record.flowId,
-        nodeId: record.currentNodeId,
-        operatorId: operatorId,
-        action: 'withdraw',
-        remark: reason,
-      });
-
-      await queryRunner.manager.save(ProgressRecord, {
-        applicationId: record.applicationId,
-        step: '审批撤回',
-        status: 'cancelled',
-        remark: reason,
-        operatorId: operatorId,
-      });
-
-      const application = await queryRunner.manager.findOne(Application, {
-        where: { id: record.applicationId },
-      });
-      if (application) {
-        application.status = 'pending';
-        await queryRunner.manager.save(application);
-      }
-
-      await queryRunner.commitTransaction();
-      return this.findRecordById(record.id);
-    } catch (error) {
-      await queryRunner.rollbackTransaction();
-      throw error;
-    } finally {
-      await queryRunner.release();
+    if (record.application.userId !== operatorId) {
+      throw new ForbiddenException('只有申请人可以撤回审批');
     }
+
+    const result = await this.applicationService.requestWithdraw({
+      applicationId: record.applicationId,
+      userId: operatorId,
+      reason: reason,
+    });
+
+    return this.findRecordById(recordId);
   }
 
   async findRecordById(id: number) {

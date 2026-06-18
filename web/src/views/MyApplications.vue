@@ -11,6 +11,8 @@
             <el-option label="已提交" value="submitted" />
             <el-option label="审核中" value="reviewing" />
             <el-option label="待补件" value="supplementing" />
+            <el-option label="撤回待审批" value="withdraw_pending" />
+            <el-option label="已撤回" value="withdrawn" />
             <el-option label="已通过" value="approved" />
             <el-option label="已驳回" value="rejected" />
             <el-option label="已完成" value="completed" />
@@ -32,18 +34,39 @@
         <el-table-column label="事项分类" width="120">
           <template #default="{ row }">{{ row.serviceItem?.category }}</template>
         </el-table-column>
-        <el-table-column label="状态" width="100">
+        <el-table-column label="状态" width="140">
           <template #default="{ row }">
-            <el-tag :type="getStatusType(row.status)">{{ getStatusText(row.status) }}</el-tag>
+            <div class="status-cell">
+              <el-tag :type="getStatusType(row.status)">{{ getStatusText(row.status) }}</el-tag>
+              <el-tag v-if="row.isResubmit" type="info" size="small" style="margin-left: 4px">
+                重提·{{ row.resubmitCount }}次
+              </el-tag>
+            </div>
           </template>
         </el-table-column>
         <el-table-column prop="createdAt" label="提交时间" width="180">
           <template #default="{ row }">{{ formatDate(row.createdAt) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="160">
+        <el-table-column label="操作" width="280" fixed="right">
           <template #default="{ row }">
-            <el-button type="primary" link @click="$router.push(`/applications/${row.id}`)">
+            <el-button type="primary" link @click="goToDetail(row.id)">
               查看详情
+            </el-button>
+            <el-button
+              v-if="row.canWithdraw"
+              type="warning"
+              link
+              @click="goToWithdraw(row.id)"
+            >
+              申请撤回
+            </el-button>
+            <el-button
+              v-if="row.canResubmit"
+              type="success"
+              link
+              @click="goToDetail(row.id)"
+            >
+              重新提交
             </el-button>
           </template>
         </el-table-column>
@@ -55,11 +78,13 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
-import { getApplications } from '@/api/application'
+import { getApplications, canWithdraw, canResubmit } from '@/api/application'
 import type { Application } from '@/types'
 import dayjs from 'dayjs'
 
+const router = useRouter()
 const userStore = useUserStore()
 
 const loading = ref(false)
@@ -77,6 +102,8 @@ const getStatusType = (status: string) => {
     rejected: 'danger',
     completed: 'success',
     supplementing: 'warning',
+    withdraw_pending: 'warning',
+    withdrawn: 'info',
   }
   return map[status] || 'info'
 }
@@ -89,6 +116,8 @@ const getStatusText = (status: string) => {
     rejected: '已驳回',
     completed: '已完成',
     supplementing: '待补件',
+    withdraw_pending: '撤回待审批',
+    withdrawn: '已撤回',
   }
   return map[status] || status
 }
@@ -99,10 +128,26 @@ const loadApplications = async () => {
   if (!userStore.user) return
   loading.value = true
   try {
-    applications.value = await getApplications(
+    const apps = await getApplications(
       userStore.user.id,
       filterForm.status || undefined
     )
+
+    const appsWithPermissions = await Promise.all(
+      apps.map(async (app) => {
+        const [withdrawCheck, resubmitCheck] = await Promise.all([
+          canWithdraw(app.id, userStore.user!.id),
+          canResubmit(app.id, userStore.user!.id),
+        ])
+        return {
+          ...app,
+          canWithdraw: withdrawCheck.canWithdraw,
+          canResubmit: resubmitCheck.canResubmit,
+        }
+      })
+    )
+
+    applications.value = appsWithPermissions
   } finally {
     loading.value = false
   }
@@ -113,5 +158,30 @@ const resetFilter = () => {
   loadApplications()
 }
 
+const goToDetail = (id: number) => {
+  router.push(`/applications/${id}`)
+}
+
+const goToWithdraw = (id: number) => {
+  router.push(`/applications/${id}`)
+}
+
 onMounted(loadApplications)
 </script>
+
+<style scoped>
+.page-header {
+  margin-bottom: 20px;
+}
+.page-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #303133;
+}
+.status-cell {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+</style>

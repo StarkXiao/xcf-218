@@ -35,7 +35,7 @@
         <el-table-column prop="createdAt" label="时间" width="180">
           <template #default="{ row }">{{ formatDate(row.createdAt) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="260">
+        <el-table-column label="操作" width="320">
           <template #default="{ row }">
             <el-button
               v-if="!row.read"
@@ -62,12 +62,28 @@
               前往补件
             </el-button>
             <el-button
+              v-if="row.type === 'system' && userStore.isAdmin && isWithdrawMessage(row) && row.applicationId"
+              type="warning"
+              link
+              @click.stop="goToWithdrawalReview"
+            >
+              撤回审批
+            </el-button>
+            <el-button
               v-if="row.applicationId"
               type="primary"
               link
               @click.stop="goToApplication(row.applicationId)"
             >
               查看申请
+            </el-button>
+            <el-button
+              v-if="isResubmitMessage(row) && row.applicationId"
+              type="success"
+              link
+              @click.stop="goToApplication(row.applicationId)"
+            >
+              查看新申请
             </el-button>
             <el-button
               v-if="row.appointmentId"
@@ -262,6 +278,18 @@ const goToWindowHandling = (id: number) => {
   } else {
     router.push(`/my-window-handlings?highlight=${id}`)
   }
+}
+
+const isWithdrawMessage = (row: Message) => {
+  return row.title.includes('撤回申请') || row.content.includes('撤回')
+}
+
+const isResubmitMessage = (row: Message) => {
+  return row.title.includes('重新提交') || row.content.includes('重新提交')
+}
+
+const goToWithdrawalReview = () => {
+  router.push('/admin/withdrawal-review')
 }
 
 onMounted(loadMessages)

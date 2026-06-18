@@ -199,6 +199,12 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '补件管理', admin: true },
       },
       {
+        path: 'admin/withdrawal-review',
+        name: 'AdminWithdrawalReview',
+        component: () => import('@/views/AdminWithdrawalReview.vue'),
+        meta: { title: '撤回审批', admin: true },
+      },
+      {
         path: 'admin/proxy',
         name: 'AdminProxy',
         component: () => import('@/views/AdminProxy.vue'),
