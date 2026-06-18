@@ -76,6 +76,7 @@ export class ApplicationService {
         if (materialInfo) {
           const materialFile = this.fileRepository.create({
             applicationId: savedApp.id,
+            fieldName,
             materialName: materialInfo.name,
             originalName: file.originalname,
             fileName: file.filename,
@@ -83,6 +84,10 @@ export class ApplicationService {
             fileSize: file.size,
             mimeType: file.mimetype,
             required: materialInfo.required,
+            version: 1,
+            isCurrent: true,
+            status: 'normal',
+            uploaderId: data.userId,
           });
           await queryRunner.manager.save(materialFile);
         }
@@ -160,7 +165,7 @@ export class ApplicationService {
     const app = await this.appRepository.findOne({ where: { id } });
     if (!app) throw new NotFoundException('申请不存在');
 
-    const validStatuses = ['submitted', 'reviewing', 'approved', 'rejected', 'completed'];
+    const validStatuses = ['submitted', 'reviewing', 'approved', 'rejected', 'completed', 'supplementing'];
     if (!validStatuses.includes(status)) {
       throw new BadRequestException('无效的状态');
     }
@@ -175,6 +180,7 @@ export class ApplicationService {
       approved: '审核通过',
       rejected: '审核驳回',
       completed: '办理完成',
+      supplementing: '材料退回',
     };
 
     if (stepMap[status]) {
@@ -192,6 +198,7 @@ export class ApplicationService {
       approved: '申请审核通过',
       rejected: '申请被驳回',
       completed: '申请已办理完成',
+      supplementing: '申请材料需补充',
     };
 
     await this.messageRepository.save({

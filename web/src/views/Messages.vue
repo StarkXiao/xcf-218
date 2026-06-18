@@ -35,7 +35,7 @@
         <el-table-column prop="createdAt" label="时间" width="180">
           <template #default="{ row }">{{ formatDate(row.createdAt) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="160">
+        <el-table-column label="操作" width="200">
           <template #default="{ row }">
             <el-button
               v-if="!row.read"
@@ -44,6 +44,14 @@
               @click.stop="markOneRead(row.id)"
             >
               标为已读
+            </el-button>
+            <el-button
+              v-if="row.type === 'supplement'"
+              type="warning"
+              link
+              @click.stop="goToSupplement"
+            >
+              前往补件
             </el-button>
             <el-button
               v-if="row.applicationId"
@@ -90,6 +98,7 @@ const getMessageType = (type: string) => {
   const map: Record<string, string> = {
     application: 'primary',
     appointment: 'success',
+    supplement: 'warning',
     system: 'info',
   }
   return map[type] || 'info'
@@ -99,6 +108,7 @@ const getMessageTypeText = (type: string) => {
   const map: Record<string, string> = {
     application: '申请通知',
     appointment: '预约通知',
+    supplement: '补件通知',
     system: '系统通知',
   }
   return map[type] || '系统通知'
@@ -120,7 +130,9 @@ const handleRowClick = async (row: Message) => {
   if (!row.read) {
     await markOneRead(row.id)
   }
-  if (row.appointmentId) {
+  if (row.type === 'supplement') {
+    goToSupplement()
+  } else if (row.appointmentId) {
     goToAppointment(row.appointmentId)
   } else if (row.applicationId) {
     goToApplication(row.applicationId)
@@ -146,6 +158,10 @@ const goToApplication = (id: number) => {
 
 const goToAppointment = (id: number) => {
   router.push(`/my-appointments?highlight=${id}`)
+}
+
+const goToSupplement = () => {
+  router.push('/supplement-center')
 }
 
 onMounted(loadMessages)

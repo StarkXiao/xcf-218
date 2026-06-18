@@ -45,6 +45,9 @@
               <el-table-column type="index" label="序号" width="80" />
               <el-table-column prop="materialName" label="材料名称" />
               <el-table-column prop="originalName" label="文件名" />
+              <el-table-column label="版本" width="80">
+                <template #default="{ row }">V{{ row.version }}</template>
+              </el-table-column>
               <el-table-column label="文件大小" width="120">
                 <template #default="{ row }">{{ formatFileSize(row.fileSize) }}</template>
               </el-table-column>
@@ -55,10 +58,16 @@
                   </el-tag>
                 </template>
               </el-table-column>
+              <el-table-column label="状态" width="100">
+                <template #default="{ row }">
+                  <el-tag v-if="row.status === 'rejected'" type="danger">已退回</el-tag>
+                  <el-tag v-else type="success">正常</el-tag>
+                </template>
+              </el-table-column>
               <el-table-column label="上传时间" width="180">
                 <template #default="{ row }">{{ formatDate(row.createdAt) }}</template>
               </el-table-column>
-              <el-table-column label="操作" width="180" fixed="right">
+              <el-table-column label="操作" width="260" fixed="right">
                 <template #default="{ row }">
                   <el-button
                     v-if="row.mimeType.startsWith('image/')"
@@ -78,6 +87,9 @@
                   </el-button>
                   <el-button type="primary" link @click="downloadFile(row)">
                     下载
+                  </el-button>
+                  <el-button type="primary" link @click="viewVersions(row)">
+                    历史版本
                   </el-button>
                 </template>
               </el-table-column>
@@ -111,6 +123,9 @@
                 <el-button type="danger" :loading="submitting" @click="doReview('reject')">
                   <el-icon><CircleClose /></el-icon> 驳回申请
                 </el-button>
+                <el-button type="warning" :loading="submitting" @click="openRejectDialog">
+                  <el-icon><Refresh /></el-icon> 退回材料
+                </el-button>
                 <el-button type="primary" :loading="submitting" @click="doReview('complete')">
                   <el-icon><Finished /></el-icon> 办理完成
                 </el-button>
@@ -120,7 +135,11 @@
 
           <div v-if="application.reviewComment" class="content-section">
             <h3 class="section-title">审核意见记录</h3>
-            <el-alert :title="application.reviewComment" :type="application.status === 'rejected' ? 'error' : 'success'" show-icon />
+            <el-alert
+              :title="application.reviewComment"
+              :type="application.status === 'rejected' || application.status === 'supplementing' ? 'error' : 'success'"
+              show-icon
+            />
           </div>
         </el-col>
 
@@ -133,7 +152,7 @@
                 :key="record.id"
                 :timestamp="formatDate(record.createdAt)"
                 placement="top"
-                :type="index === 0 ? 'primary' : (record.status === 'failed' ? 'danger' : 'success')"
+                :type="index === 0 ? 'primary' : (record.status === 'failed' || record.status === 'pending' ? 'danger' : 'success')"
                 :hollow="index === 0"
               >
                 <div class="timeline-content">
@@ -161,6 +180,80 @@
         </div>
       </div>
     </el-dialog>
+
+    <el-dialog v-model="versionVisible" title="版本历史" width="800px" destroy-on-close>
+      <div>
+        <h4 style="margin-bottom: 12px">{{ currentMaterialName }} - 历史版本</h4>
+        <el-table :data="versionList" style="width: 100%">
+          <el-table-column prop="version" label="版本号" width="100" />
+          <el-table-column prop="originalName" label="文件名" />
+          <el-table-column label="文件大小" width="120">
+            <template #default="{ row }">{{ formatFileSize(row.fileSize) }}</template>
+          </el-table-column>
+          <el-table-column label="状态" width="100">
+            <template #default="{ row }">
+              <el-tag v-if="row.status === 'rejected'" type="danger">已退回</el-tag>
+              <el-tag v-else-if="row.isCurrent" type="success">当前版本</el-tag>
+              <el-tag v-else type="info">历史版本</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="退回原因" show-overflow-tooltip>
+            <template #default="{ row }">{{ row.rejectReason || '-' }}</template>
+          </el-table-column>
+          <el-table-column label="上传时间" width="180">
+            <template #default="{ row }">{{ formatDate(row.createdAt) }}</template>
+          </el-table-column>
+          <el-table-column label="操作" width="160">
+            <template #default="{ row }">
+              <el-button type="primary" link @click="previewFile(row)">预览</el-button>
+              <el-button type="primary" link @click="downloadFile(row)">下载</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
+    </el-dialog>
+
+    <el-dialog v-model="rejectVisible" title="退回材料" width="700px" destroy-on-close>
+      <el-form :model="rejectForm" label-width="100px">
+        <el-form-item label="退回说明" required>
+          <el-input
+            v-model="rejectForm.reason"
+            type="textarea"
+            :rows="2"
+            placeholder="请输入整体退回说明"
+          />
+        </el-form-item>
+        <el-form-item label="选择材料" required>
+          <div class="reject-material-list">
+            <el-checkbox
+              v-for="file in reviewableFiles"
+              :key="file.fieldName"
+              v-model="rejectForm.selectedMap[file.fieldName]"
+              :label="file.fieldName"
+            >
+              <span style="font-weight: 500">{{ file.materialName }}</span>
+              <span style="color: #909399; margin-left: 8px">（当前版本：V{{ file.version }}）</span>
+            </el-checkbox>
+            <div v-for="file in reviewableFiles" :key="'detail-' + file.fieldName" v-if="rejectForm.selectedMap[file.fieldName]" class="reject-reason-item">
+              <el-input
+                v-model="rejectForm.reasonMap[file.fieldName]"
+                type="textarea"
+                :rows="1"
+                :placeholder="`请输入【${file.materialName}】的具体退回原因`"
+                size="small"
+                style="margin-top: 8px; margin-left: 28px; width: calc(100% - 28px)"
+              />
+            </div>
+          </div>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="rejectVisible = false">取消</el-button>
+        <el-button type="danger" :loading="submitting" @click="submitRejectMaterials">
+          确认退回
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -168,9 +261,11 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { ArrowLeft, CircleCheck, CircleClose, Finished, Refresh, Document } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 import { getApplicationById, downloadMaterial, previewMaterial } from '@/api/application'
 import { reviewApplication } from '@/api/admin'
+import { getMaterialVersions, rejectMaterials } from '@/api/supplement-center'
 import type { Application, MaterialFile } from '@/types'
 import dayjs from 'dayjs'
 
@@ -185,12 +280,28 @@ const previewVisible = ref(false)
 const previewFile = ref<MaterialFile | null>(null)
 const previewUrl = ref('')
 
+const versionVisible = ref(false)
+const versionList = ref<MaterialFile[]>([])
+const currentMaterialName = ref('')
+
+const rejectVisible = ref(false)
+const rejectForm = reactive({
+  reason: '',
+  selectedMap: {} as Record<string, boolean>,
+  reasonMap: {} as Record<string, string>,
+})
+
 const reviewForm = reactive({
   comment: '',
 })
 
 const canReview = computed(() => {
-  return application.value && ['submitted', 'reviewing', 'approved'].includes(application.value.status)
+  return application.value && ['submitted', 'reviewing', 'approved', 'supplementing'].includes(application.value.status)
+})
+
+const reviewableFiles = computed(() => {
+  if (!application.value) return []
+  return application.value.materialFiles.filter(f => f.isCurrent)
 })
 
 const sortedRecords = computed(() => {
@@ -205,6 +316,7 @@ const getStatusType = (status: string) => {
     approved: 'success',
     rejected: 'danger',
     completed: 'success',
+    supplementing: 'warning',
   }
   return map[status] || 'info'
 }
@@ -216,6 +328,7 @@ const getStatusText = (status: string) => {
     approved: '已通过',
     rejected: '已驳回',
     completed: '已完成',
+    supplementing: '待补件',
   }
   return map[status] || status
 }
@@ -286,6 +399,70 @@ const downloadFile = (file: MaterialFile) => {
   window.open(downloadMaterial(file.id), '_blank')
 }
 
+const viewVersions = async (file: MaterialFile) => {
+  currentMaterialName.value = file.materialName
+  versionList.value = await getMaterialVersions(file.applicationId, file.fieldName)
+  versionVisible.value = true
+}
+
+const openRejectDialog = () => {
+  rejectForm.reason = ''
+  rejectForm.selectedMap = {}
+  rejectForm.reasonMap = {}
+  rejectVisible.value = true
+}
+
+const submitRejectMaterials = async () => {
+  if (!userStore.user || !application.value) return
+
+  const selectedFiles = reviewableFiles.value.filter(f => rejectForm.selectedMap[f.fieldName])
+  if (selectedFiles.length === 0) {
+    ElMessage.warning('请至少选择一项需要退回的材料')
+    return
+  }
+
+  if (!rejectForm.reason.trim()) {
+    ElMessage.warning('请输入退回说明')
+    return
+  }
+
+  for (const file of selectedFiles) {
+    if (!rejectForm.reasonMap[file.fieldName]?.trim()) {
+      ElMessage.warning(`请输入【${file.materialName}】的具体退回原因`)
+      return
+    }
+  }
+
+  await ElMessageBox.confirm(
+    `确定要退回 ${selectedFiles.length} 项材料吗？用户将收到补件通知。`,
+    '确认退回',
+    { type: 'warning' }
+  )
+
+  submitting.value = true
+  try {
+    const rejectedMaterials = selectedFiles.map(f => ({
+      fieldName: f.fieldName,
+      materialName: f.materialName,
+      reason: rejectForm.reasonMap[f.fieldName],
+    }))
+
+    await rejectMaterials(
+      application.value.id,
+      userStore.user.id,
+      rejectForm.reason,
+      rejectedMaterials
+    )
+
+    ElMessage.success('材料已退回，用户已收到补件通知')
+    rejectVisible.value = false
+    await loadData()
+  } catch (e) {
+  } finally {
+    submitting.value = false
+  }
+}
+
 onMounted(loadData)
 </script>
 
@@ -344,5 +521,16 @@ onMounted(loadData)
 }
 .no-preview p {
   margin-top: 12px;
+}
+.reject-material-list {
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 12px;
+  background: #fafafa;
+  border-radius: 4px;
+}
+.reject-material-list .el-checkbox {
+  display: block;
+  margin-bottom: 12px;
 }
 </style>

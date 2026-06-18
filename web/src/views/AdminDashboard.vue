@@ -19,7 +19,7 @@
     </el-row>
 
     <el-row :gutter="20" style="margin-top: 20px">
-      <el-col :span="12">
+      <el-col :span="8">
         <el-card class="card-hover" shadow="hover" @click="$router.push('/admin/schedule')" style="cursor: pointer">
           <div class="quick-card">
             <el-icon :size="40" color="#409eff"><Calendar /></el-icon>
@@ -31,13 +31,25 @@
           </div>
         </el-card>
       </el-col>
-      <el-col :span="12">
+      <el-col :span="8">
         <el-card class="card-hover" shadow="hover" @click="$router.push('/admin/appointments')" style="cursor: pointer">
           <div class="quick-card">
             <el-icon :size="40" color="#67c23a"><Tickets /></el-icon>
             <div>
               <div class="quick-title">预约办理</div>
               <div class="quick-desc">处理预约签到、叫号和现场办理</div>
+            </div>
+            <el-icon :size="20" color="#c0c4cc"><ArrowRight /></el-icon>
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :span="8">
+        <el-card class="card-hover" shadow="hover" @click="$router.push('/admin/supplement')" style="cursor: pointer">
+          <div class="quick-card">
+            <el-icon :size="40" color="#e6a23c"><Refresh /></el-icon>
+            <div>
+              <div class="quick-title">补件管理</div>
+              <div class="quick-desc">查看和管理用户的材料补充情况</div>
             </div>
             <el-icon :size="20" color="#c0c4cc"><ArrowRight /></el-icon>
           </div>
@@ -55,6 +67,7 @@
                 <el-option label="全部" value="" />
                 <el-option label="待审核" value="submitted" />
                 <el-option label="审核中" value="reviewing" />
+                <el-option label="待补件" value="supplementing" />
                 <el-option label="已通过" value="approved" />
                 <el-option label="已驳回" value="rejected" />
                 <el-option label="已完成" value="completed" />
@@ -97,6 +110,20 @@ import { ref, computed, onMounted } from 'vue'
 import { getStatistics } from '@/api/admin'
 import { getApplications } from '@/api/application'
 import type { Application, Statistics } from '@/types'
+import {
+  Document,
+  Clock,
+  Loading,
+  CircleCheck,
+  CircleClose,
+  Finished,
+  User,
+  Menu,
+  Calendar,
+  Tickets,
+  ArrowRight,
+  Refresh,
+} from '@element-plus/icons-vue'
 import dayjs from 'dayjs'
 
 const loading = ref(false)
@@ -105,14 +132,15 @@ const applications = ref<Application[]>([])
 const filterStatus = ref('')
 
 const stats = computed(() => [
-  { key: 'total', label: '申请总数', value: statistics.value?.totalApplications || 0, icon: 'Document', color: '#409eff' },
-  { key: 'pending', label: '待审核', value: statistics.value?.pendingCount || 0, icon: 'Clock', color: '#e6a23c' },
-  { key: 'reviewing', label: '审核中', value: statistics.value?.reviewingCount || 0, icon: 'Loading', color: '#909399' },
-  { key: 'approved', label: '已通过', value: statistics.value?.approvedCount || 0, icon: 'CircleCheck', color: '#67c23a' },
-  { key: 'rejected', label: '已驳回', value: statistics.value?.rejectedCount || 0, icon: 'CircleClose', color: '#f56c6c' },
-  { key: 'completed', label: '已完成', value: statistics.value?.completedCount || 0, icon: 'Finished', color: '#67c23a' },
-  { key: 'users', label: '注册用户', value: statistics.value?.userCount || 0, icon: 'User', color: '#909399' },
-  { key: 'items', label: '办事事项', value: statistics.value?.itemCount || 0, icon: 'Menu', color: '#409eff' },
+  { key: 'total', label: '申请总数', value: statistics.value?.totalApplications || 0, icon: Document, color: '#409eff' },
+  { key: 'pending', label: '待审核', value: statistics.value?.pendingCount || 0, icon: Clock, color: '#e6a23c' },
+  { key: 'reviewing', label: '审核中', value: statistics.value?.reviewingCount || 0, icon: Loading, color: '#909399' },
+  { key: 'supplementing', label: '待补件', value: statistics.value?.supplementingCount || 0, icon: Refresh, color: '#e6a23c' },
+  { key: 'approved', label: '已通过', value: statistics.value?.approvedCount || 0, icon: CircleCheck, color: '#67c23a' },
+  { key: 'rejected', label: '已驳回', value: statistics.value?.rejectedCount || 0, icon: CircleClose, color: '#f56c6c' },
+  { key: 'completed', label: '已完成', value: statistics.value?.completedCount || 0, icon: Finished, color: '#67c23a' },
+  { key: 'users', label: '注册用户', value: statistics.value?.userCount || 0, icon: User, color: '#909399' },
+  { key: 'items', label: '办事事项', value: statistics.value?.itemCount || 0, icon: Menu, color: '#409eff' },
 ])
 
 const getStatusType = (status: string) => {
@@ -122,6 +150,7 @@ const getStatusType = (status: string) => {
     approved: 'success',
     rejected: 'danger',
     completed: 'success',
+    supplementing: 'warning',
   }
   return map[status] || 'info'
 }
@@ -133,6 +162,7 @@ const getStatusText = (status: string) => {
     approved: '已通过',
     rejected: '已驳回',
     completed: '已完成',
+    supplementing: '待补件',
   }
   return map[status] || status
 }

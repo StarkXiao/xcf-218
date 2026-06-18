@@ -10,6 +10,7 @@
           <el-select v-model="filterForm.status" placeholder="全部状态" clearable style="width: 160px">
             <el-option label="已提交" value="submitted" />
             <el-option label="审核中" value="reviewing" />
+            <el-option label="待补件" value="supplementing" />
             <el-option label="已通过" value="approved" />
             <el-option label="已驳回" value="rejected" />
             <el-option label="已完成" value="completed" />
@@ -75,6 +76,7 @@ const getStatusType = (status: string) => {
     approved: 'success',
     rejected: 'danger',
     completed: 'success',
+    supplementing: 'warning',
   }
   return map[status] || 'info'
 }
@@ -86,6 +88,7 @@ const getStatusText = (status: string) => {
     approved: '已通过',
     rejected: '已驳回',
     completed: '已完成',
+    supplementing: '待补件',
   }
   return map[status] || status
 }

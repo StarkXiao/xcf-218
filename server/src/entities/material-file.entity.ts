@@ -17,6 +17,9 @@ export class MaterialFile {
   materialName: string;
 
   @Column()
+  fieldName: string;
+
+  @Column()
   originalName: string;
 
   @Column()
@@ -33,6 +36,21 @@ export class MaterialFile {
 
   @Column({ default: false })
   required: boolean;
+
+  @Column({ default: 1 })
+  version: number;
+
+  @Column({ default: true })
+  isCurrent: boolean;
+
+  @Column({ default: 'normal' })
+  status: string;
+
+  @Column({ nullable: true })
+  uploaderId: number;
+
+  @Column('text', { nullable: true })
+  rejectReason: string;
 
   @CreateDateColumn()
   createdAt: Date;

@@ -67,6 +67,12 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '消息中心' },
       },
       {
+        path: 'supplement-center',
+        name: 'SupplementCenter',
+        component: () => import('@/views/SupplementCenter.vue'),
+        meta: { title: '补件中心' },
+      },
+      {
         path: 'admin',
         name: 'Admin',
         component: () => import('@/views/AdminDashboard.vue'),
@@ -83,6 +89,12 @@ const routes: RouteRecordRaw[] = [
         name: 'AdminAppointments',
         component: () => import('@/views/AdminAppointments.vue'),
         meta: { title: '预约办理', admin: true },
+      },
+      {
+        path: 'admin/supplement',
+        name: 'AdminSupplement',
+        component: () => import('@/views/AdminSupplement.vue'),
+        meta: { title: '补件管理', admin: true },
       },
       {
         path: 'admin/review/:id',

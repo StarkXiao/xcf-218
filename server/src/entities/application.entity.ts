@@ -3,6 +3,7 @@ import { User } from './user.entity';
 import { ServiceItem } from './service-item.entity';
 import { ProgressRecord } from './progress-record.entity';
 import { MaterialFile } from './material-file.entity';
+import { SupplementRecord } from './supplement-record.entity';
 
 @Entity('applications')
 export class Application {
@@ -46,6 +47,9 @@ export class Application {
 
   @OneToMany(() => MaterialFile, file => file.application)
   materialFiles: MaterialFile[];
+
+  @OneToMany(() => SupplementRecord, record => record.application)
+  supplementRecords: SupplementRecord[];
 
   @CreateDateColumn()
   createdAt: Date;

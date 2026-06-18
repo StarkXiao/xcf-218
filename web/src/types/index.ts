@@ -24,13 +24,34 @@ export interface MaterialFile {
   id: number
   applicationId: number
   materialName: string
+  fieldName: string
   originalName: string
   fileName: string
   filePath: string
   fileSize: number
   mimeType: string
   required: boolean
+  version: number
+  isCurrent: boolean
+  status: string
+  uploaderId?: number
+  rejectReason?: string
   createdAt: string
+}
+
+export interface SupplementRecord {
+  id: number
+  applicationId: number
+  operatorId: number
+  operator?: User
+  rejectReason: string
+  rejectedMaterials: Array<{ fieldName: string; materialName: string; reason: string }>
+  status: string
+  supplementTime?: string
+  application?: Application
+  currentFiles?: MaterialFile[]
+  createdAt: string
+  updatedAt: string
 }
 
 export interface Application {
@@ -80,6 +101,7 @@ export interface Statistics {
   approvedCount: number
   rejectedCount: number
   completedCount: number
+  supplementingCount: number
   userCount: number
   itemCount: number
 }

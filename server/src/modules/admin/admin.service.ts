@@ -24,6 +24,7 @@ export class AdminService {
     const approvedCount = await this.appRepository.count({ where: { status: 'approved' } });
     const rejectedCount = await this.appRepository.count({ where: { status: 'rejected' } });
     const completedCount = await this.appRepository.count({ where: { status: 'completed' } });
+    const supplementingCount = await this.appRepository.count({ where: { status: 'supplementing' } });
     const userCount = await this.userRepository.count({ where: { role: 'user' } });
     const itemCount = await this.itemRepository.count({ where: { active: true } });
 
@@ -34,6 +35,7 @@ export class AdminService {
       approvedCount,
       rejectedCount,
       completedCount,
+      supplementingCount,
       userCount,
       itemCount,
     };

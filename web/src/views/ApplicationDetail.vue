@@ -33,12 +33,57 @@
             </el-descriptions>
           </div>
 
+          <div v-if="application.status === 'supplementing'" class="content-section">
+            <h3 class="section-title">需补充材料</h3>
+            <el-alert
+              :title="currentSupplement?.rejectReason || '管理员要求补充以下材料'"
+              type="error"
+              show-icon
+              style="margin-bottom: 16px"
+            />
+            <el-table :data="rejectedMaterials" style="width: 100%">
+              <el-table-column prop="materialName" label="材料名称" width="200" />
+              <el-table-column prop="reason" label="退回原因" />
+              <el-table-column label="状态" width="120">
+                <template #default="{ row }">
+                  <el-tag v-if="isMaterialUploaded(row.fieldName)" type="success">已补充</el-tag>
+                  <el-tag v-else type="danger">待补充</el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column label="操作" width="280">
+                <template #default="{ row }">
+                  <el-button type="primary" link @click="viewVersionHistory(row.fieldName, row.materialName)">
+                    历史版本
+                  </el-button>
+                  <el-button
+                    v-if="!isMaterialUploaded(row.fieldName)"
+                    type="success"
+                    link
+                    @click="openUpload(row.fieldName, row.materialName)"
+                  >
+                    补充上传
+                  </el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+
           <div class="content-section">
             <h3 class="section-title">提交材料</h3>
             <el-table :data="application.materialFiles" style="width: 100%" v-if="application.materialFiles.length > 0">
               <el-table-column type="index" label="序号" width="80" />
               <el-table-column prop="materialName" label="材料名称" />
               <el-table-column prop="originalName" label="文件名" />
+              <el-table-column label="版本" width="80">
+                <template #default="{ row }">v{{ row.version }}</template>
+              </el-table-column>
+              <el-table-column label="状态" width="100">
+                <template #default="{ row }">
+                  <el-tag v-if="row.status === 'rejected'" type="danger">已退回</el-tag>
+                  <el-tag v-else-if="row.isCurrent" type="success">当前</el-tag>
+                  <el-tag v-else type="info">历史</el-tag>
+                </template>
+              </el-table-column>
               <el-table-column label="文件大小" width="120">
                 <template #default="{ row }">{{ formatFileSize(row.fileSize) }}</template>
               </el-table-column>
@@ -81,7 +126,11 @@
 
           <div v-if="application.reviewComment" class="content-section">
             <h3 class="section-title">审核意见</h3>
-            <el-alert :title="application.reviewComment" :type="application.status === 'rejected' ? 'error' : 'success'" show-icon />
+            <el-alert
+              :title="application.reviewComment"
+              :type="application.status === 'rejected' || application.status === 'supplementing' ? 'error' : 'success'"
+              show-icon
+            />
           </div>
         </el-col>
 
@@ -122,23 +171,98 @@
         </div>
       </div>
     </el-dialog>
+
+    <el-dialog v-model="versionVisible" title="版本历史记录" width="800px" destroy-on-close>
+      <div>
+        <h4 style="margin-bottom: 12px">{{ currentMaterialName }} - 历史版本</h4>
+        <el-table :data="versionList" style="width: 100%">
+          <el-table-column prop="version" label="版本号" width="100" />
+          <el-table-column prop="originalName" label="文件名" />
+          <el-table-column label="文件大小" width="120">
+            <template #default="{ row }">{{ formatFileSize(row.fileSize) }}</template>
+          </el-table-column>
+          <el-table-column label="状态" width="120">
+            <template #default="{ row }">
+              <el-tag v-if="row.status === 'rejected'" type="danger">已退回</el-tag>
+              <el-tag v-else-if="row.isCurrent" type="success">当前版本</el-tag>
+              <el-tag v-else type="info">历史版本</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="上传时间" width="180">
+            <template #default="{ row }">{{ formatDate(row.createdAt) }}</template>
+          </el-table-column>
+          <el-table-column label="操作" width="160">
+            <template #default="{ row }">
+              <el-button type="primary" link @click="previewFile(row)">预览</el-button>
+              <el-button type="primary" link @click="downloadFile(row)">下载</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
+    </el-dialog>
+
+    <el-dialog v-model="uploadVisible" title="补充上传材料" width="600px" destroy-on-close>
+      <div>
+        <p><strong>材料名称：</strong>{{ uploadMaterialName }}</p>
+        <p style="margin: 12px 0">请选择要上传的文件（支持 JPG/PNG/PDF，不超过 10MB）：</p>
+        <el-upload
+          drag
+          :auto-upload="false"
+          :limit="1"
+          :on-change="handleFileChange"
+          :on-exceed="handleExceed"
+          accept=".jpg,.jpeg,.png,.pdf"
+        >
+          <el-icon class="el-icon--upload"><UploadFilled /></el-icon>
+          <div class="el-upload__text">将文件拖到此处，或<em>点击上传</em></div>
+        </el-upload>
+      </div>
+      <template #footer>
+        <el-button @click="uploadVisible = false">取消</el-button>
+        <el-button type="primary" :loading="submitting" @click="submitUpload">提交上传</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import { ArrowLeft, Refresh, Document, UploadFilled } from '@element-plus/icons-vue'
+import { useUserStore } from '@/stores/user'
 import { getApplicationById, downloadMaterial, previewMaterial } from '@/api/application'
-import type { Application, MaterialFile } from '@/types'
+import {
+  getSupplementByApplicationId,
+  getMaterialVersions,
+  uploadSupplementMaterial,
+} from '@/api/supplement-center'
+import type { Application, MaterialFile, SupplementRecord } from '@/types'
 import dayjs from 'dayjs'
 
 const route = useRoute()
+const router = useRouter()
+const userStore = useUserStore()
 
 const loading = ref(false)
 const application = ref<Application | null>(null)
 const previewVisible = ref(false)
 const previewFile = ref<MaterialFile | null>(null)
 const previewUrl = ref('')
+
+const supplementRecords = ref<SupplementRecord[]>([])
+const currentSupplement = ref<SupplementRecord | null>(null)
+const rejectedMaterials = ref<any[]>([])
+
+const versionVisible = ref(false)
+const versionList = ref<MaterialFile[]>([])
+const currentMaterialName = ref('')
+
+const uploadVisible = ref(false)
+const uploadFieldName = ref('')
+const uploadMaterialName = ref('')
+const uploadFileObj = ref<File | null>(null)
+const submitting = ref(false)
 
 const sortedRecords = computed(() => {
   if (!application.value?.progressRecords) return []
@@ -152,6 +276,7 @@ const getStatusType = (status: string) => {
     approved: 'success',
     rejected: 'danger',
     completed: 'success',
+    supplementing: 'warning',
   }
   return map[status] || 'info'
 }
@@ -163,6 +288,7 @@ const getStatusText = (status: string) => {
     approved: '已通过',
     rejected: '已驳回',
     completed: '已完成',
+    supplementing: '待补件',
   }
   return map[status] || status
 }
@@ -178,10 +304,27 @@ const formatFileSize = (bytes: number) => {
 const loadData = async () => {
   loading.value = true
   try {
-    application.value = await getApplicationById(Number(route.params.id))
+    const appId = Number(route.params.id)
+    application.value = await getApplicationById(appId)
+
+    if (application.value.status === 'supplementing') {
+      supplementRecords.value = await getSupplementByApplicationId(appId)
+      currentSupplement.value = supplementRecords.value.find((r) => r.status === 'pending') || null
+      if (currentSupplement.value) {
+        rejectedMaterials.value = currentSupplement.value.rejectedMaterials || []
+      }
+    }
   } finally {
     loading.value = false
   }
+}
+
+const isMaterialUploaded = (fieldName: string) => {
+  if (!application.value?.materialFiles) return false
+  const file = application.value.materialFiles.find(
+    (f) => f.fieldName === fieldName && f.isCurrent
+  )
+  return file && file.status !== 'rejected'
 }
 
 const previewImage = (file: MaterialFile) => {
@@ -198,6 +341,56 @@ const previewPdf = (file: MaterialFile) => {
 
 const downloadFile = (file: MaterialFile) => {
   window.open(downloadMaterial(file.id), '_blank')
+}
+
+const viewVersionHistory = async (fieldName: string, materialName: string) => {
+  if (!application.value) return
+  currentMaterialName.value = materialName
+  versionList.value = await getMaterialVersions(application.value.id, fieldName)
+  versionVisible.value = true
+}
+
+const openUpload = (fieldName: string, materialName: string) => {
+  uploadFieldName.value = fieldName
+  uploadMaterialName.value = materialName
+  uploadFileObj.value = null
+  uploadVisible.value = true
+}
+
+const handleFileChange = (f: any) => {
+  uploadFileObj.value = f.raw
+}
+
+const handleExceed = () => {
+  ElMessage.warning('只能上传一个文件')
+}
+
+const submitUpload = async () => {
+  if (!userStore.user?.id || !currentSupplement.value || !application.value) return
+  if (!uploadFileObj.value) {
+    ElMessage.warning('请选择上传文件')
+    return
+  }
+
+  submitting.value = true
+  try {
+    const material = rejectedMaterials.value.find(
+      (m) => m.fieldName === uploadFieldName.value
+    )
+    await uploadSupplementMaterial(
+      currentSupplement.value.id,
+      uploadFieldName.value,
+      uploadMaterialName.value,
+      uploadFileObj.value,
+      userStore.user.id,
+      material?.required ?? false
+    )
+    ElMessage.success('材料上传成功')
+    uploadVisible.value = false
+    await loadData()
+  } finally {
+    submitting.value = false
+  }
 }
 
 onMounted(loadData)
@@ -222,6 +415,15 @@ onMounted(loadData)
 .apply-time {
   font-size: 13px;
   color: #909399;
+}
+.section-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: #303133;
+}
+.content-section {
+  margin-bottom: 24px;
 }
 .timeline-content h4 {
   font-size: 14px;

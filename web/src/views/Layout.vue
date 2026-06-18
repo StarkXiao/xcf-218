@@ -57,6 +57,10 @@
             <el-icon><List /></el-icon>
             <span>进度跟踪</span>
           </el-menu-item>
+          <el-menu-item index="/supplement-center">
+            <el-icon><Refresh /></el-icon>
+            <span>补件中心</span>
+          </el-menu-item>
           <el-menu-item index="/messages">
             <el-icon><Bell /></el-icon>
             <span>消息中心</span>
@@ -95,9 +99,12 @@ const activeMenu = computed(() => {
   if (route.path.startsWith('/services')) return '/services'
   if (route.path.startsWith('/book')) return '/services'
   if (route.path.startsWith('/apply')) return '/services'
+  if (route.path.startsWith('/applications')) return '/my-applications'
   if (route.path.startsWith('/admin/schedule')) return '/admin'
   if (route.path.startsWith('/admin/appointments')) return '/admin'
+  if (route.path.startsWith('/admin/supplement')) return '/admin'
   if (route.path.startsWith('/admin')) return '/admin'
+  if (route.path.startsWith('/supplement-center')) return '/supplement-center'
   return route.path
 })
 

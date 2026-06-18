@@ -8,6 +8,7 @@ import { Message } from './entities/message.entity';
 import { MaterialFile } from './entities/material-file.entity';
 import { Schedule } from './entities/schedule.entity';
 import { Appointment } from './entities/appointment.entity';
+import { SupplementRecord } from './entities/supplement-record.entity';
 import { UserModule } from './modules/user/user.module';
 import { ServiceItemModule } from './modules/service-item/service-item.module';
 import { ApplicationModule } from './modules/application/application.module';
@@ -17,6 +18,7 @@ import { AdminModule } from './modules/admin/admin.module';
 import { UploadModule } from './modules/upload/upload.module';
 import { ScheduleModule } from './modules/schedule/schedule.module';
 import { AppointmentModule } from './modules/appointment/appointment.module';
+import { SupplementCenterModule } from './modules/supplement-center/supplement-center.module';
 import { SeedService } from './seed.service';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -30,13 +32,13 @@ import * as path from 'path';
       username: 'root',
       password: 'root123456',
       database: 'government_service',
-      entities: [User, ServiceItem, Application, ProgressRecord, Message, MaterialFile, Schedule, Appointment],
+      entities: [User, ServiceItem, Application, ProgressRecord, Message, MaterialFile, Schedule, Appointment, SupplementRecord],
       synchronize: true,
       logging: false,
       charset: 'utf8mb4',
       timezone: '+08:00',
     }),
-    TypeOrmModule.forFeature([User, ServiceItem, Application, ProgressRecord, Message, MaterialFile, Schedule, Appointment]),
+    TypeOrmModule.forFeature([User, ServiceItem, Application, ProgressRecord, Message, MaterialFile, Schedule, Appointment, SupplementRecord]),
     UserModule,
     ServiceItemModule,
     ApplicationModule,
@@ -46,6 +48,7 @@ import * as path from 'path';
     UploadModule,
     ScheduleModule,
     AppointmentModule,
+    SupplementCenterModule,
   ],
   providers: [SeedService],
 })
