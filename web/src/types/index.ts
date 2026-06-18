@@ -1005,3 +1005,19 @@ export interface MaterialPreviewRule {
   createdAt: string
   updatedAt: string
 }
+
+export interface VersionDiffField {
+  field: string
+  label: string
+  oldValue: any
+  newValue: any
+  changed: boolean
+}
+
+export interface VersionDiff {
+  v1: MaterialFile | null
+  v2: MaterialFile | null
+  fields: VersionDiffField[]
+  changed: boolean
+  canPreview: boolean
+}

@@ -194,7 +194,7 @@
                   <el-form-item label="步骤">
                     <div class="steps-editor">
                       <div v-for="(step, stepIndex) in example.steps" :key="stepIndex" class="step-item">
-                        <el-input v-model="example.steps[stepIndex]" placeholder={`步骤 ${stepIndex + 1}`} />
+                        <el-input v-model="example.steps[stepIndex]" :placeholder="`步骤 ${stepIndex + 1}`" />
                         <el-button type="danger" link @click="removeExampleStep(index, stepIndex)">
                           <el-icon><Delete /></el-icon>
                         </el-button>

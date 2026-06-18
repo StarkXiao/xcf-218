@@ -179,7 +179,7 @@
       <div v-if="currentStep === 2">
         <div class="form-section-title">材料上传与复用</div>
         <el-alert
-          title="勾选"共享"可将材料复用于多个事项，避免重复上传"
+          title="勾选「共享」可将材料复用于多个事项，避免重复上传"
           type="success"
           :closable="false"
           show-icon

@@ -161,6 +161,25 @@
               <div v-if="uploadedFiles[field.key]?.[0]" class="file-info">
                 <el-icon color="#67c23a"><Check /></el-icon>
                 <span>{{ uploadedFiles[field.key][0].name }} ({{ formatFileSize(uploadedFiles[field.key][0].size || 0) }})</span>
+                <el-button
+                  v-if="canPreviewFile(uploadedFiles[field.key][0])"
+                  type="primary"
+                  link
+                  size="small"
+                  style="margin-left: 8px"
+                  @click="previewLocalFile(uploadedFiles[field.key][0], field.label)"
+                >
+                  <el-icon><View /></el-icon> 预览
+                </el-button>
+                <el-button
+                  type="danger"
+                  link
+                  size="small"
+                  style="margin-left: 4px"
+                  @click="handleFileRemove(field.key)"
+                >
+                  <el-icon><Delete /></el-icon> 删除
+                </el-button>
               </div>
             </div>
           </el-form-item>
@@ -198,6 +217,26 @@
             <div v-if="legacyUploadedFiles[index]?.[0]" class="file-info">
               <el-icon color="#67c23a"><Check /></el-icon>
               <span>{{ legacyUploadedFiles[index][0].name }} ({{ formatFileSize(legacyUploadedFiles[index][0].size || 0) }})</span>
+              <el-button
+                v-if="canPreviewFile(legacyUploadedFiles[index][0])"
+                type="primary"
+                link
+                size="small"
+                style="margin-left: 8px"
+                @click="previewLocalFile(legacyUploadedFiles[index][0], mat.name)"
+              >
+                <el-icon><View /></el-icon> 预览
+              </el-button>
+              <el-button
+                v-if="!mat.required"
+                type="danger"
+                link
+                size="small"
+                style="margin-left: 4px"
+                @click="handleLegacyFileRemove(index)"
+              >
+                <el-icon><Delete /></el-icon> 删除
+              </el-button>
             </div>
           </el-form-item>
         </template>
@@ -273,6 +312,37 @@
             </el-button>
           </template>
         </el-dialog>
+
+        <el-dialog
+          v-model="showFilePreviewVisible"
+          :title="filePreviewName"
+          width="80%"
+          top="5vh"
+          destroy-on-close
+          @closed="closeFilePreview"
+        >
+          <div style="display: flex; justify-content: center; align-items: center; min-height: 400px">
+            <img
+              v-if="filePreviewType === 'image'"
+              :src="filePreviewUrl"
+              :alt="filePreviewName"
+              style="max-width: 100%; max-height: 70vh; object-fit: contain"
+            />
+            <iframe
+              v-else-if="filePreviewType === 'pdf'"
+              :src="filePreviewUrl"
+              :title="filePreviewName"
+              style="width: 100%; height: 70vh; border: none"
+            />
+            <el-empty v-else description="暂不支持预览该文件类型，请下载后查看" />
+          </div>
+          <template #footer>
+            <el-button @click="closeFilePreview">
+              <el-icon><Close /></el-icon>
+              关闭
+            </el-button>
+          </template>
+        </el-dialog>
       </el-form>
     </el-card>
   </div>
@@ -289,6 +359,9 @@ import {
   CircleCheck,
   InfoFilled,
   QuestionFilled,
+  View,
+  Delete,
+  Close,
 } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 import { getServiceItemById } from '@/api/service-item'
@@ -318,6 +391,49 @@ const previewResult = ref<PreviewResult | null>(null)
 const showPreviewDialog = ref(false)
 const riskTipList = ref<RiskTip[]>([])
 const riskConfirmed = ref(false)
+
+const showFilePreviewVisible = ref(false)
+const filePreviewUrl = ref('')
+const filePreviewName = ref('')
+const filePreviewType = ref('')
+
+const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp']
+const PDF_EXTENSION = 'pdf'
+
+const canPreviewFile = (file: any) => {
+  if (!file?.name) return false
+  const ext = file.name.split('.').pop()?.toLowerCase()
+  if (!ext) return false
+  return [...IMAGE_EXTENSIONS, PDF_EXTENSION].includes(ext)
+}
+
+const getPreviewType = (fileName: string) => {
+  const ext = fileName.split('.').pop()?.toLowerCase()
+  if (IMAGE_EXTENSIONS.includes(ext || '')) return 'image'
+  if (ext === PDF_EXTENSION) return 'pdf'
+  return 'unknown'
+}
+
+const previewLocalFile = (file: UploadFile, name: string) => {
+  if (!file.raw) {
+    ElMessage.warning('无法预览该文件')
+    return
+  }
+  filePreviewName.value = name
+  filePreviewType.value = getPreviewType(file.name)
+  filePreviewUrl.value = URL.createObjectURL(file.raw)
+  showFilePreviewVisible.value = true
+}
+
+const closeFilePreview = () => {
+  if (filePreviewUrl.value && filePreviewUrl.value.startsWith('blob:')) {
+    URL.revokeObjectURL(filePreviewUrl.value)
+  }
+  showFilePreviewVisible.value = false
+  filePreviewUrl.value = ''
+  filePreviewName.value = ''
+  filePreviewType.value = ''
+}
 
 const formData = reactive<Record<string, any>>({
   name: '',

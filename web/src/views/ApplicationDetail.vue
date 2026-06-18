@@ -108,13 +108,35 @@
           </div>
 
           <div class="content-section">
-            <h3 class="section-title">提交材料</h3>
-            <el-table :data="application.materialFiles" style="width: 100%" v-if="application.materialFiles.length > 0">
+            <div class="section-header">
+              <h3 class="section-title">提交材料</h3>
+              <div class="section-actions">
+                <el-tag v-if="fileStats" size="small" type="info">
+                  共 {{ fileStats.currentCount }} 份材料
+                  <span v-if="fileStats.hasMultipleVersions">
+                    ，{{ Object.keys(fileStats.versionsByField).filter(k => fileStats.versionsByField[k] > 1).length }} 份有多版本
+                  </span>
+                </el-tag>
+              </div>
+            </div>
+            <el-table :data="currentMaterialFiles" style="width: 100%" v-if="currentMaterialFiles.length > 0">
               <el-table-column type="index" label="序号" width="80" />
               <el-table-column prop="materialName" label="材料名称" />
-              <el-table-column prop="originalName" label="文件名" />
-              <el-table-column label="版本" width="80">
-                <template #default="{ row }">v{{ row.version }}</template>
+              <el-table-column prop="originalName" label="文件名" show-overflow-tooltip />
+              <el-table-column label="版本" width="100">
+                <template #default="{ row }">
+                  <el-tag size="small" :type="row.version > 1 ? 'warning' : 'info'">v{{ row.version }}</el-tag>
+                  <el-button
+                    v-if="getVersionCount(row.fieldName) > 1"
+                    type="primary"
+                    link
+                    size="small"
+                    style="margin-left: 4px"
+                    @click="viewVersionHistory(row.fieldName, row.materialName)"
+                  >
+                    ({{ getVersionCount(row.fieldName) }})
+                  </el-button>
+                </template>
               </el-table-column>
               <el-table-column label="来源" width="100">
                 <template #default="{ row }">
@@ -135,7 +157,7 @@
               </el-table-column>
               <el-table-column label="是否必需" width="100">
                 <template #default="{ row }">
-                  <el-tag :type="row.required ? 'danger' : 'info'">
+                  <el-tag :type="row.required ? 'danger' : 'info'" size="small">
                     {{ row.required ? '必需' : '选填' }}
                   </el-tag>
                 </template>
@@ -143,27 +165,39 @@
               <el-table-column label="上传时间" width="180">
                 <template #default="{ row }">{{ formatDate(row.createdAt) }}</template>
               </el-table-column>
-              <el-table-column label="操作" width="180" fixed="right">
+              <el-table-column label="操作" width="280" fixed="right">
                 <template #default="{ row }">
-                  <el-button
-                    v-if="row.mimeType.startsWith('image/')"
-                    type="primary"
-                    link
-                    @click="previewImage(row)"
-                  >
-                    预览
-                  </el-button>
-                  <el-button
-                    v-else-if="row.mimeType === 'application/pdf'"
-                    type="primary"
-                    link
-                    @click="previewPdf(row)"
-                  >
-                    预览
-                  </el-button>
-                  <el-button type="primary" link @click="downloadFile(row)">
-                    下载
-                  </el-button>
+                  <el-dropdown trigger="click" @command="(cmd: string) => handleMaterialAction(cmd, row)">
+                    <el-button type="primary" link>
+                      操作 <el-icon><ArrowDown /></el-icon>
+                    </el-button>
+                    <template #dropdown>
+                      <el-dropdown-menu>
+                        <el-dropdown-item command="preview">
+                          <el-icon><View /></el-icon> 预览
+                        </el-dropdown-item>
+                        <el-dropdown-item command="download">
+                          <el-icon><Download /></el-icon> 下载
+                        </el-dropdown-item>
+                        <el-dropdown-item
+                          command="reupload"
+                          :disabled="!canEditMaterial(row)"
+                        >
+                          <el-icon><Upload /></el-icon> 重新上传
+                        </el-dropdown-item>
+                        <el-dropdown-item command="history">
+                          <el-icon><Clock /></el-icon> 历史版本
+                        </el-dropdown-item>
+                        <el-dropdown-item
+                          command="delete"
+                          :disabled="!canEditMaterial(row) || row.required"
+                          divided
+                        >
+                          <el-icon><Delete /></el-icon> 删除
+                        </el-dropdown-item>
+                      </el-dropdown-menu>
+                    </template>
+                  </el-dropdown>
                 </template>
               </el-table-column>
             </el-table>
@@ -308,7 +342,7 @@
                 </el-table-column>
                 <el-table-column label="预览" width="100">
                   <template #default="{ row }">
-                    <el-button type="primary" link size="small" @click.stop="previewFile(row)">
+                    <el-button type="primary" link size="small" @click.stop="openPreview(row)">
                       预览
                     </el-button>
                   </template>
@@ -347,47 +381,258 @@
     </el-dialog>
 
     <el-dialog v-model="previewVisible" title="材料预览" width="80%" :close-on-click-modal="false">
-      <div v-if="previewFile" class="preview-container">
-        <img v-if="previewFile.mimeType.startsWith('image/')" :src="previewUrl" alt="预览" class="preview-image" />
-        <iframe
-          v-else-if="previewFile.mimeType === 'application/pdf'"
-          :src="previewUrl"
-          class="preview-pdf"
-        ></iframe>
-        <div v-else class="no-preview">
-          <el-icon :size="48"><Document /></el-icon>
-          <p>该文件类型不支持在线预览，请下载后查看</p>
+      <div v-if="previewFileData" class="preview-container">
+        <div class="preview-header">
+          <div class="preview-info">
+            <span class="preview-name">{{ previewFileData.materialName }}</span>
+            <el-tag size="small" style="margin-left: 8px">v{{ previewFileData.version }}</el-tag>
+            <span class="preview-subtitle" style="margin-left: 12px">
+              {{ previewFileData.originalName }} · {{ formatFileSize(previewFileData.fileSize) }}
+            </span>
+          </div>
+          <div class="preview-actions">
+            <el-button type="primary" link @click="downloadFile(previewFileData)">
+              <el-icon><Download /></el-icon> 下载
+            </el-button>
+          </div>
+        </div>
+        <div class="preview-content">
+          <img v-if="previewFileData.mimeType.startsWith('image/')" :src="previewUrl" alt="预览" class="preview-image" />
+          <iframe
+            v-else-if="previewFileData.mimeType === 'application/pdf'"
+            :src="previewUrl"
+            class="preview-pdf"
+          ></iframe>
+          <div v-else class="no-preview">
+            <el-icon :size="48"><Document /></el-icon>
+            <p>该文件类型不支持在线预览，请下载后查看</p>
+            <el-button type="primary" style="margin-top: 12px" @click="downloadFile(previewFileData)">
+              下载文件
+            </el-button>
+          </div>
         </div>
       </div>
     </el-dialog>
 
-    <el-dialog v-model="versionVisible" title="版本历史记录" width="800px" destroy-on-close>
+    <el-dialog v-model="versionVisible" title="版本历史记录" width="1000px" destroy-on-close>
       <div>
-        <h4 style="margin-bottom: 12px">{{ currentMaterialName }} - 历史版本</h4>
-        <el-table :data="versionList" style="width: 100%">
-          <el-table-column prop="version" label="版本号" width="100" />
-          <el-table-column prop="originalName" label="文件名" />
+        <div class="version-header">
+          <h4 style="margin-bottom: 0">{{ currentMaterialName }} - 历史版本</h4>
+          <div v-if="versionList.length >= 2" class="version-compare">
+            <span style="margin-right: 8px; color: #909399; font-size: 13px">
+              选择两个版本进行比对：
+            </span>
+            <el-select
+              v-model="compareVersion1"
+              placeholder="版本1"
+              size="small"
+              style="width: 120px; margin-right: 8px"
+            >
+              <el-option
+                v-for="v in versionList"
+                :key="v.id"
+                :label="`v${v.version}`"
+                :value="v.id"
+              />
+            </el-select>
+            <span style="margin: 0 8px">VS</span>
+            <el-select
+              v-model="compareVersion2"
+              placeholder="版本2"
+              size="small"
+              style="width: 120px; margin-left: 8px"
+            >
+              <el-option
+                v-for="v in versionList"
+                :key="v.id"
+                :label="`v${v.version}`"
+                :value="v.id"
+              />
+            </el-select>
+            <el-button
+              type="primary"
+              size="small"
+              style="margin-left: 12px"
+              :disabled="!compareVersion1 || !compareVersion2 || compareVersion1 === compareVersion2"
+              @click="handleCompareVersions"
+            >
+              <el-icon><Refresh /></el-icon> 版本比对
+            </el-button>
+          </div>
+        </div>
+        <el-table :data="versionList" style="width: 100%; margin-top: 16px">
+          <el-table-column label="版本" width="100">
+            <template #default="{ row }">
+              <el-tag :type="row.isCurrent ? 'success' : 'info'" size="small">v{{ row.version }}</el-tag>
+              <el-tag v-if="row.isCurrent" type="success" size="small" style="margin-left: 4px">当前</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="originalName" label="文件名" show-overflow-tooltip />
           <el-table-column label="文件大小" width="120">
             <template #default="{ row }">{{ formatFileSize(row.fileSize) }}</template>
+          </el-table-column>
+          <el-table-column label="类型" width="120">
+            <template #default="{ row }">
+              <el-tag v-if="row.mimeType.startsWith('image/')" type="success" size="small">图片</el-tag>
+              <el-tag v-else-if="row.mimeType === 'application/pdf'" type="primary" size="small">PDF</el-tag>
+              <el-tag v-else type="info" size="small">其他</el-tag>
+            </template>
           </el-table-column>
           <el-table-column label="状态" width="120">
             <template #default="{ row }">
               <el-tag v-if="row.status === 'rejected'" type="danger">已退回</el-tag>
-              <el-tag v-else-if="row.isCurrent" type="success">当前版本</el-tag>
-              <el-tag v-else type="info">历史版本</el-tag>
+              <el-tag v-else-if="row.status === 'reused'" type="success">复用</el-tag>
+              <el-tag v-else-if="row.status === 'new'" type="primary">新增</el-tag>
+              <el-tag v-else type="info">正常</el-tag>
             </template>
           </el-table-column>
           <el-table-column label="上传时间" width="180">
             <template #default="{ row }">{{ formatDate(row.createdAt) }}</template>
           </el-table-column>
-          <el-table-column label="操作" width="160">
+          <el-table-column label="操作" width="200" fixed="right">
             <template #default="{ row }">
-              <el-button type="primary" link @click="previewImage(row)">预览</el-button>
+              <el-button type="primary" link @click="openPreview(row)">预览</el-button>
               <el-button type="primary" link @click="downloadFile(row)">下载</el-button>
+              <el-button
+                v-if="!row.isCurrent && canRevertVersion(row)"
+                type="warning"
+                link
+                @click="handleRevertVersion(row)"
+              >
+                恢复此版本
+              </el-button>
             </template>
           </el-table-column>
         </el-table>
       </div>
+    </el-dialog>
+
+    <el-dialog v-model="compareVisible" title="版本比对结果" width="900px" destroy-on-close>
+      <div v-if="versionDiff">
+        <el-descriptions :column="2" border>
+          <el-descriptions-item label="材料名称" :span="2">{{ versionDiff.materialName }}</el-descriptions-item>
+          <el-descriptions-item label="比对版本">
+            <el-tag>v{{ versionDiff.version1.version }}</el-tag>
+            <span style="margin: 0 8px">→</span>
+            <el-tag type="warning">v{{ versionDiff.version2.version }}</el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item label="时间间隔">
+            {{ formatTimeDiff(versionDiff.differences.uploadTimeDiff) }}
+          </el-descriptions-item>
+        </el-descriptions>
+
+        <el-table :data="compareItems" style="width: 100%; margin-top: 16px">
+          <el-table-column prop="label" label="对比项" width="150" />
+          <el-table-column label="版本 1">
+            <template #default="{ row }">
+              <span :class="{ 'changed': row.changed }">{{ row.v1 }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="版本 2">
+            <template #default="{ row }">
+              <span :class="{ 'changed': row.changed }">{{ row.v2 }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="差异" width="120">
+            <template #default="{ row }">
+              <el-tag v-if="row.changed" type="warning">有变化</el-tag>
+              <el-tag v-else type="success">无变化</el-tag>
+            </template>
+          </el-table-column>
+        </el-table>
+
+        <div v-if="canPreviewBoth" class="compare-preview">
+          <h4 style="margin: 20px 0 12px">并排预览</h4>
+          <div class="compare-preview-grid">
+            <div class="compare-preview-item">
+              <div class="compare-preview-title">
+                版本 v{{ versionDiff.version1.version }}
+                <el-tag size="small" style="margin-left: 8px">{{ versionDiff.version1.originalName }}</el-tag>
+              </div>
+              <div class="compare-preview-content">
+                <img
+                  v-if="versionDiff.version1.mimeType.startsWith('image/')"
+                  :src="getPreviewUrl(versionDiff.version1.id)"
+                  class="compare-preview-img"
+                />
+                <iframe
+                  v-else-if="versionDiff.version1.mimeType === 'application/pdf'"
+                  :src="getPreviewUrl(versionDiff.version1.id)"
+                  class="compare-preview-pdf"
+                ></iframe>
+                <div v-else class="no-preview-small">
+                  <el-icon><Document /></el-icon>
+                  <span>不支持预览</span>
+                </div>
+              </div>
+            </div>
+            <div class="compare-preview-item">
+              <div class="compare-preview-title">
+                版本 v{{ versionDiff.version2.version }}
+                <el-tag size="small" type="warning" style="margin-left: 8px">
+                  {{ versionDiff.version2.originalName }}
+                </el-tag>
+              </div>
+              <div class="compare-preview-content">
+                <img
+                  v-if="versionDiff.version2.mimeType.startsWith('image/')"
+                  :src="getPreviewUrl(versionDiff.version2.id)"
+                  class="compare-preview-img"
+                />
+                <iframe
+                  v-else-if="versionDiff.version2.mimeType === 'application/pdf'"
+                  :src="getPreviewUrl(versionDiff.version2.id)"
+                  class="compare-preview-pdf"
+                ></iframe>
+                <div v-else class="no-preview-small">
+                  <el-icon><Document /></el-icon>
+                  <span>不支持预览</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </el-dialog>
+
+    <el-dialog v-model="reuploadVisible" title="重新上传材料" width="600px" destroy-on-close>
+      <div>
+        <p><strong>材料名称：</strong>{{ reuploadMaterial?.materialName }}</p>
+        <p v-if="reuploadMaterial" style="margin: 8px 0">
+          <strong>当前版本：</strong>v{{ reuploadMaterial.version }} · {{ reuploadMaterial.originalName }}
+        </p>
+        <el-alert
+          title="上传说明"
+          type="info"
+          :closable="false"
+          style="margin: 16px 0"
+          description="重新上传后将生成新版本（v{{ (reuploadMaterial?.version || 0) + 1 }}），旧版本仍保留在历史记录中。"
+        />
+        <el-upload
+          drag
+          :auto-upload="false"
+          :limit="1"
+          :on-change="handleReuploadFileChange"
+          :on-exceed="handleExceed"
+          accept=".jpg,.jpeg,.png,.pdf"
+        >
+          <el-icon class="el-icon--upload"><Upload /></el-icon>
+          <div class="el-upload__text">将文件拖到此处，或<em>点击上传</em></div>
+          <template #tip>
+            <div class="el-upload__tip">支持 JPG/PNG/PDF 格式，单个文件不超过 10MB</div>
+          </template>
+        </el-upload>
+        <div v-if="reuploadFileObj" class="file-selected-info">
+          <el-icon color="#67c23a"><Check /></el-icon>
+          <span>{{ reuploadFileObj.name }} ({{ formatFileSize(reuploadFileObj.size) }})</span>
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="reuploadVisible = false">取消</el-button>
+        <el-button type="primary" :loading="reuploadLoading" @click="submitReupload">
+          确认上传
+        </el-button>
+      </template>
     </el-dialog>
 
     <el-dialog v-model="uploadVisible" title="补充上传材料" width="600px" destroy-on-close>
@@ -402,7 +647,7 @@
           :on-exceed="handleExceed"
           accept=".jpg,.jpeg,.png,.pdf"
         >
-          <el-icon class="el-icon--upload"><UploadFilled /></el-icon>
+          <el-icon class="el-icon--upload"><Upload /></el-icon>
           <div class="el-upload__text">将文件拖到此处，或<em>点击上传</em></div>
         </el-upload>
       </div>
@@ -422,15 +667,21 @@ import {
   ArrowLeft,
   Refresh,
   Document,
-  UploadFilled,
+  Upload,
   Warning,
   RefreshRight,
+  Download,
+  View,
+  Delete,
+  Clock,
+  ArrowDown,
+  Check,
+  Close,
 } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 import {
   getApplicationById,
   downloadMaterial,
-  previewMaterial,
   requestWithdraw,
   canWithdraw,
   canResubmit,
@@ -441,8 +692,23 @@ import {
   getMaterialVersions,
   uploadSupplementMaterial,
 } from '@/api/supplement-center'
+import {
+  getPreviewUrl,
+  reuploadMaterialFile,
+  deleteMaterialFile,
+  getMaterialVersions as getUploadVersions,
+  compareMaterialVersions,
+  getUploadFileStats,
+} from '@/api/upload'
 import { getCertificates, previewCertificate, downloadCertificate } from '@/api/certificate'
-import type { Application, MaterialFile, SupplementRecord, Certificate, WithdrawalRecord } from '@/types'
+import type {
+  Application,
+  MaterialFile,
+  SupplementRecord,
+  Certificate,
+  WithdrawalRecord,
+} from '@/types'
+import type { VersionDiff, FileStats } from '@/api/upload'
 import dayjs from 'dayjs'
 
 const route = useRoute()
@@ -452,7 +718,7 @@ const userStore = useUserStore()
 const loading = ref(false)
 const application = ref<Application | null>(null)
 const previewVisible = ref(false)
-const previewFile = ref<MaterialFile | null>(null)
+const previewFileData = ref<MaterialFile | null>(null)
 const previewUrl = ref('')
 
 const supplementRecords = ref<SupplementRecord[]>([])
@@ -462,6 +728,17 @@ const rejectedMaterials = ref<any[]>([])
 const versionVisible = ref(false)
 const versionList = ref<MaterialFile[]>([])
 const currentMaterialName = ref('')
+const currentFieldName = ref('')
+const compareVersion1 = ref<number | null>(null)
+const compareVersion2 = ref<number | null>(null)
+
+const compareVisible = ref(false)
+const versionDiff = ref<VersionDiff | null>(null)
+
+const reuploadVisible = ref(false)
+const reuploadMaterial = ref<MaterialFile | null>(null)
+const reuploadFileObj = ref<File | null>(null)
+const reuploadLoading = ref(false)
 
 const uploadVisible = ref(false)
 const uploadFieldName = ref('')
@@ -490,6 +767,13 @@ const currentWithdrawal = computed(() => {
 const canWithdrawFlag = ref(false)
 const canResubmitFlag = ref(false)
 
+const fileStats = ref<FileStats | null>(null)
+
+const currentMaterialFiles = computed(() => {
+  if (!application.value?.materialFiles) return []
+  return application.value.materialFiles.filter(f => f.isCurrent)
+})
+
 const reusableFiles = computed(() => {
   if (!application.value?.materialFiles) return []
   return application.value.materialFiles.filter(
@@ -500,6 +784,47 @@ const reusableFiles = computed(() => {
 const sortedRecords = computed(() => {
   if (!application.value?.progressRecords) return []
   return [...application.value.progressRecords].reverse()
+})
+
+const canPreviewBoth = computed(() => {
+  if (!versionDiff.value) return false
+  const m1 = versionDiff.value.version1.mimeType
+  const m2 = versionDiff.value.version2.mimeType
+  return (
+    (m1.startsWith('image/') || m1 === 'application/pdf') &&
+    (m2.startsWith('image/') || m2 === 'application/pdf')
+  )
+})
+
+const compareItems = computed(() => {
+  if (!versionDiff.value) return []
+  const d = versionDiff.value.differences
+  return [
+    {
+      label: '文件名',
+      v1: versionDiff.value.version1.originalName,
+      v2: versionDiff.value.version2.originalName,
+      changed: d.fileNameChanged,
+    },
+    {
+      label: '文件大小',
+      v1: formatFileSize(versionDiff.value.version1.fileSize),
+      v2: formatFileSize(versionDiff.value.version2.fileSize) + (d.sizeDiff !== 0 ? ` (${d.sizeDiff > 0 ? '+' : ''}${formatFileSize(Math.abs(d.sizeDiff))})` : ''),
+      changed: d.fileSizeChanged,
+    },
+    {
+      label: '文件类型',
+      v1: versionDiff.value.version1.mimeType,
+      v2: versionDiff.value.version2.mimeType,
+      changed: d.mimeTypeChanged,
+    },
+    {
+      label: '上传时间',
+      v1: formatDate(versionDiff.value.version1.createdAt),
+      v2: formatDate(versionDiff.value.version2.createdAt),
+      changed: true,
+    },
+  ]
 })
 
 const getStatusType = (status: string) => {
@@ -547,11 +872,27 @@ const formatFileSize = (bytes: number) => {
   return (bytes / (1024 * 1024)).toFixed(2) + ' MB'
 }
 
+const formatTimeDiff = (ms: number) => {
+  if (ms < 0) ms = -ms
+  const minutes = Math.floor(ms / 60000)
+  const hours = Math.floor(minutes / 60)
+  const days = Math.floor(hours / 24)
+  if (days > 0) return `${days} 天 ${hours % 24} 小时`
+  if (hours > 0) return `${hours} 小时 ${minutes % 60} 分钟`
+  return `${minutes} 分钟`
+}
+
 const loadData = async () => {
   loading.value = true
   try {
     const appId = Number(route.params.id)
     application.value = await getApplicationById(appId)
+
+    try {
+      fileStats.value = await getUploadFileStats(appId)
+    } catch (e) {
+      // ignore stats error
+    }
 
     if (userStore.user?.id && !userStore.isAdmin) {
       const [withdrawCheck, resubmitCheck] = await Promise.all([
@@ -591,15 +932,30 @@ const isMaterialUploaded = (fieldName: string) => {
   return file && file.status !== 'rejected'
 }
 
-const previewImage = (file: MaterialFile) => {
-  previewFile.value = file
-  previewUrl.value = previewMaterial(file.id)
-  previewVisible.value = true
+const getVersionCount = (fieldName: string) => {
+  if (!application.value?.materialFiles) return 0
+  return application.value.materialFiles.filter(f => f.fieldName === fieldName).length
 }
 
-const previewPdf = (file: MaterialFile) => {
-  previewFile.value = file
-  previewUrl.value = previewMaterial(file.id)
+const canEditMaterial = (row: MaterialFile) => {
+  if (!application.value) return false
+  if (userStore.isAdmin) return true
+  const isOwner = application.value.userId === userStore.user?.id
+  const editableStatuses = ['submitted', 'accepted', 'reviewing', 'supplementing']
+  return isOwner && editableStatuses.includes(application.value.status)
+}
+
+const canRevertVersion = (row: MaterialFile) => {
+  if (!application.value) return false
+  const editableStatuses = ['submitted', 'accepted', 'reviewing', 'supplementing']
+  if (!editableStatuses.includes(application.value.status)) return false
+  if (userStore.isAdmin) return true
+  return application.value.userId === userStore.user?.id
+}
+
+const openPreview = (file: MaterialFile) => {
+  previewFileData.value = file
+  previewUrl.value = getPreviewUrl(file.id)
   previewVisible.value = true
 }
 
@@ -610,8 +966,122 @@ const downloadFile = (file: MaterialFile) => {
 const viewVersionHistory = async (fieldName: string, materialName: string) => {
   if (!application.value) return
   currentMaterialName.value = materialName
-  versionList.value = await getMaterialVersions(application.value.id, fieldName)
+  currentFieldName.value = fieldName
+  try {
+    versionList.value = await getUploadVersions(application.value.id, fieldName)
+  } catch {
+    versionList.value = await getMaterialVersions(application.value.id, fieldName)
+  }
+  compareVersion1.value = null
+  compareVersion2.value = null
   versionVisible.value = true
+}
+
+const handleCompareVersions = async () => {
+  if (!application.value || !compareVersion1.value || !compareVersion2.value) return
+  try {
+    versionDiff.value = await compareMaterialVersions(
+      application.value.id,
+      currentFieldName.value,
+      compareVersion1.value,
+      compareVersion2.value,
+    )
+    compareVisible.value = true
+  } catch (e: any) {
+    ElMessage.error(e.message || '版本比对失败')
+  }
+}
+
+const handleRevertVersion = async (row: MaterialFile) => {
+  if (!reuploadMaterial || !application.value) return
+  try {
+    await ElMessageBox.confirm(
+      `确定要将「${currentMaterialName.value}」恢复到 v${row.version} 版本吗？这将创建一个新版本。`,
+      '确认恢复版本',
+      { type: 'warning' },
+    )
+    ElMessage.info('请通过重新上传功能上传该版本文件')
+  } catch {
+    // user cancelled
+  }
+}
+
+const handleMaterialAction = (command: string, row: MaterialFile) => {
+  switch (command) {
+    case 'preview':
+      openPreview(row)
+      break
+    case 'download':
+      downloadFile(row)
+      break
+    case 'reupload':
+      openReupload(row)
+      break
+    case 'history':
+      viewVersionHistory(row.fieldName, row.materialName)
+      break
+    case 'delete':
+      handleDelete(row)
+      break
+  }
+}
+
+const openReupload = (row: MaterialFile) => {
+  reuploadMaterial.value = row
+  reuploadFileObj.value = null
+  reuploadVisible.value = true
+}
+
+const handleReuploadFileChange = (f: any) => {
+  reuploadFileObj.value = f.raw
+}
+
+const handleExceed = () => {
+  ElMessage.warning('只能上传一个文件')
+}
+
+const submitReupload = async () => {
+  if (!userStore.user?.id || !reuploadMaterial.value) return
+  if (!reuploadFileObj.value) {
+    ElMessage.warning('请选择上传文件')
+    return
+  }
+
+  reuploadLoading.value = true
+  try {
+    await reuploadMaterialFile(
+      reuploadMaterial.value.id,
+      reuploadFileObj.value,
+      userStore.user.id,
+    )
+    ElMessage.success('材料重新上传成功')
+    reuploadVisible.value = false
+    await loadData()
+  } catch (e: any) {
+    ElMessage.error(e.message || '上传失败')
+  } finally {
+    reuploadLoading.value = false
+  }
+}
+
+const handleDelete = async (row: MaterialFile) => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除材料「${row.materialName}」吗？删除后无法恢复。`,
+      '确认删除',
+      { type: 'warning' },
+    )
+  } catch {
+    return
+  }
+
+  try {
+    await deleteMaterialFile(row.id, userStore.user?.id)
+    ElMessage.success('材料删除成功')
+    await loadData()
+  } catch (e: any) {
+    ElMessage.error(e.message || '删除失败')
+  }
 }
 
 const openUpload = (fieldName: string, materialName: string) => {
@@ -623,10 +1093,6 @@ const openUpload = (fieldName: string, materialName: string) => {
 
 const handleFileChange = (f: any) => {
   uploadFileObj.value = f.raw
-}
-
-const handleExceed = () => {
-  ElMessage.warning('只能上传一个文件')
 }
 
 const submitUpload = async () => {
@@ -786,11 +1252,22 @@ onMounted(loadData)
   display: flex;
   gap: 8px;
 }
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
 .section-title {
   font-size: 16px;
   font-weight: 600;
-  margin-bottom: 12px;
+  margin: 0;
   color: #303133;
+}
+.section-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 .content-section {
   margin-bottom: 24px;
@@ -806,7 +1283,34 @@ onMounted(loadData)
   color: #606266;
   line-height: 1.5;
 }
+.preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: #f5f7fa;
+  border-radius: 4px;
+  margin-bottom: 16px;
+}
+.preview-info {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.preview-name {
+  font-weight: 600;
+  font-size: 15px;
+  color: #303133;
+}
+.preview-subtitle {
+  font-size: 13px;
+  color: #909399;
+}
 .preview-container {
+  display: flex;
+  flex-direction: column;
+}
+.preview-content {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -860,5 +1364,76 @@ onMounted(loadData)
 .material-reuse-section {
   max-height: 500px;
   overflow-y: auto;
+}
+.version-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.version-compare {
+  display: flex;
+  align-items: center;
+}
+.file-selected-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: #f0f9eb;
+  border-radius: 4px;
+  font-size: 13px;
+  color: #67c23a;
+}
+.compare-preview {
+  margin-top: 20px;
+}
+.compare-preview-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.compare-preview-item {
+  border: 1px solid #ebeef5;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.compare-preview-title {
+  padding: 8px 12px;
+  background: #f5f7fa;
+  font-size: 13px;
+  font-weight: 500;
+  border-bottom: 1px solid #ebeef5;
+}
+.compare-preview-content {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 300px;
+  background: #fff;
+  padding: 12px;
+}
+.compare-preview-img {
+  max-width: 100%;
+  max-height: 400px;
+  object-fit: contain;
+}
+.compare-preview-pdf {
+  width: 100%;
+  height: 400px;
+  border: none;
+}
+.no-preview-small {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #909399;
+  font-size: 13px;
+  gap: 8px;
+}
+:deep(.changed) {
+  color: #e6a23c;
+  font-weight: 500;
 }
 </style>

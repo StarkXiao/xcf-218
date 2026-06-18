@@ -2,6 +2,9 @@ import { Module } from '@nestjs/common';
 import { MulterModule } from '@nestjs/platform-express';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MaterialFile } from '../../entities/material-file.entity';
+import { Application } from '../../entities/application.entity';
+import { ProgressRecord } from '../../entities/progress-record.entity';
+import { Message } from '../../entities/message.entity';
 import { UploadController } from './upload.controller';
 import { UploadService } from './upload.service';
 import { diskStorage } from 'multer';
@@ -10,7 +13,7 @@ import * as fs from 'fs';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([MaterialFile]),
+    TypeOrmModule.forFeature([MaterialFile, Application, ProgressRecord, Message]),
     MulterModule.register({
       storage: diskStorage({
         destination: (req, file, cb) => {

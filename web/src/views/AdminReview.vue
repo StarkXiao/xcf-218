@@ -212,10 +212,10 @@
     </el-card>
 
     <el-dialog v-model="previewVisible" title="材料预览" width="80%" :close-on-click-modal="false">
-      <div v-if="previewFile" class="preview-container">
-        <img v-if="previewFile.mimeType.startsWith('image/')" :src="previewUrl" alt="预览" class="preview-image" />
+      <div v-if="currentPreviewFile" class="preview-container">
+        <img v-if="currentPreviewFile.mimeType.startsWith('image/')" :src="previewUrl" alt="预览" class="preview-image" />
         <iframe
-          v-else-if="previewFile.mimeType === 'application/pdf'"
+          v-else-if="currentPreviewFile.mimeType === 'application/pdf'"
           :src="previewUrl"
           class="preview-pdf"
         ></iframe>
@@ -226,9 +226,20 @@
       </div>
     </el-dialog>
 
-    <el-dialog v-model="versionVisible" title="版本历史" width="800px" destroy-on-close>
+    <el-dialog v-model="versionVisible" title="版本历史" width="900px" destroy-on-close>
       <div>
-        <h4 style="margin-bottom: 12px">{{ currentMaterialName }} - 历史版本</h4>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px">
+          <h4 style="margin: 0">{{ currentMaterialName }} - 历史版本</h4>
+          <el-button
+            type="primary"
+            size="small"
+            :disabled="versionList.length < 2"
+            @click="openCompareDialog"
+          >
+            <el-icon><Refresh /></el-icon>
+            版本比对
+          </el-button>
+        </div>
         <el-table :data="versionList" style="width: 100%">
           <el-table-column prop="version" label="版本号" width="100" />
           <el-table-column prop="originalName" label="文件名" />
@@ -256,6 +267,176 @@
           </el-table-column>
         </el-table>
       </div>
+    </el-dialog>
+
+    <el-dialog
+      v-model="compareDialogVisible"
+      title="版本比对"
+      width="1000px"
+      top="5vh"
+      destroy-on-close
+    >
+      <div style="margin-bottom: 16px">
+        <el-row :gutter="16">
+          <el-col :span="11">
+            <el-select
+              v-model="compareVersions.v1Id"
+              placeholder="选择版本 1"
+              style="width: 100%"
+              clearable
+            >
+              <el-option
+                v-for="v in versionList"
+                :key="v.id"
+                :label="`V${v.version} - ${v.originalName}`"
+                :value="v.id"
+              />
+            </el-select>
+          </el-col>
+          <el-col :span="2" style="display: flex; justify-content: center; align-items: center; color: #909399">
+            ↔
+          </el-col>
+          <el-col :span="11">
+            <el-select
+              v-model="compareVersions.v2Id"
+              placeholder="选择版本 2"
+              style="width: 100%"
+              clearable
+            >
+              <el-option
+                v-for="v in versionList"
+                :key="v.id"
+                :label="`V${v.version} - ${v.originalName}`"
+                :value="v.id"
+              />
+            </el-select>
+          </el-col>
+        </el-row>
+        <div style="text-align: center; margin-top: 12px">
+          <el-button type="primary" :disabled="!canCompare" :loading="compareLoading" @click="handleCompare">
+            开始比对
+          </el-button>
+        </div>
+      </div>
+
+      <div v-if="compareLoading" style="text-align: center; padding: 40px 0">
+        <el-icon class="is-loading" :size="32"><Refresh /></el-icon>
+        <p style="margin-top: 12px; color: #909399">正在比对版本...</p>
+      </div>
+
+      <div v-else-if="compareResult">
+        <el-descriptions :column="1" border style="margin-bottom: 20px">
+          <el-descriptions-item
+            v-for="item in compareResult.fields"
+            :key="item.field"
+            :label="item.label"
+          >
+            <template v-if="item.changed">
+              <span style="text-decoration: line-through; color: #f56c6c; margin-right: 12px">
+                {{ formatDiffValue(item.oldValue) }}
+              </span>
+              <span style="color: #67c23a">→ {{ formatDiffValue(item.newValue) }}</span>
+              <el-tag type="warning" size="small" style="margin-left: 8px">已变更</el-tag>
+            </template>
+            <template v-else>
+              <span>{{ formatDiffValue(item.oldValue) }}</span>
+            </template>
+          </el-descriptions-item>
+        </el-descriptions>
+
+        <el-row v-if="compareResult.canPreview" :gutter="16">
+          <el-col :span="12">
+            <el-card shadow="hover">
+              <template #header>
+                <div style="display: flex; justify-content: space-between; align-items: center">
+                  <span style="font-weight: 600">版本 V{{ compareResult.v1?.version }}</span>
+                  <span style="color: #909399; font-size: 12px">
+                    {{ formatDate(compareResult.v1?.createdAt || '') }}
+                  </span>
+                </div>
+              </template>
+              <div style="display: flex; justify-content: center; align-items: center; min-height: 300px; background: #f5f7fa; border-radius: 4px">
+                <img
+                  v-if="getPreviewType(compareResult.v1?.originalName || '') === 'image'"
+                  :src="previewMaterial(compareResult.v1!.id)"
+                  :alt="compareResult.v1?.originalName"
+                  style="max-width: 100%; max-height: 300px; object-fit: contain"
+                />
+                <iframe
+                  v-else-if="getPreviewType(compareResult.v1?.originalName || '') === 'pdf'"
+                  :src="previewMaterial(compareResult.v1!.id)"
+                  :title="compareResult.v1?.originalName"
+                  style="width: 100%; height: 300px; border: none"
+                />
+                <el-empty v-else description="该版本不支持预览" />
+              </div>
+              <div style="text-align: center; margin-top: 12px">
+                <el-button size="small" @click="downloadFile(compareResult.v1!)">
+                  <el-icon><Download /></el-icon>
+                  下载此版本
+                </el-button>
+              </div>
+            </el-card>
+          </el-col>
+          <el-col :span="12">
+            <el-card shadow="hover">
+              <template #header>
+                <div style="display: flex; justify-content: space-between; align-items: center">
+                  <span style="font-weight: 600">版本 V{{ compareResult.v2?.version }}</span>
+                  <span style="color: #909399; font-size: 12px">
+                    {{ formatDate(compareResult.v2?.createdAt || '') }}
+                  </span>
+                </div>
+              </template>
+              <div style="display: flex; justify-content: center; align-items: center; min-height: 300px; background: #f5f7fa; border-radius: 4px">
+                <img
+                  v-if="getPreviewType(compareResult.v2?.originalName || '') === 'image'"
+                  :src="previewMaterial(compareResult.v2!.id)"
+                  :alt="compareResult.v2?.originalName"
+                  style="max-width: 100%; max-height: 300px; object-fit: contain"
+                />
+                <iframe
+                  v-else-if="getPreviewType(compareResult.v2?.originalName || '') === 'pdf'"
+                  :src="previewMaterial(compareResult.v2!.id)"
+                  :title="compareResult.v2?.originalName"
+                  style="width: 100%; height: 300px; border: none"
+                />
+                <el-empty v-else description="该版本不支持预览" />
+              </div>
+              <div style="text-align: center; margin-top: 12px">
+                <el-button size="small" @click="downloadFile(compareResult.v2!)">
+                  <el-icon><Download /></el-icon>
+                  下载此版本
+                </el-button>
+              </div>
+            </el-card>
+          </el-col>
+        </el-row>
+
+        <el-alert
+          v-else-if="compareResult.changed"
+          title="文件内容可能发生变化，但不支持在线预览对比，请下载后查看"
+          type="info"
+          show-icon
+          :closable="false"
+        />
+        <el-alert
+          v-else
+          title="两个版本完全相同"
+          type="success"
+          show-icon
+          :closable="false"
+        />
+      </div>
+
+      <el-empty v-else description="请选择两个版本进行比对" />
+
+      <template #footer>
+        <el-button @click="compareDialogVisible = false">
+          <el-icon><Close /></el-icon>
+          关闭
+        </el-button>
+      </template>
     </el-dialog>
 
     <el-dialog v-model="rejectVisible" title="退回材料" width="700px" destroy-on-close>
@@ -306,13 +487,14 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ArrowLeft, CircleCheck, CircleClose, Finished, Refresh, Document, Reading, DocumentChecked } from '@element-plus/icons-vue'
+import { ArrowLeft, CircleCheck, CircleClose, Finished, Refresh, Document, Reading, DocumentChecked, View, Download, Close } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 import { getApplicationById, downloadMaterial, previewMaterial } from '@/api/application'
 import { reviewApplication } from '@/api/admin'
 import { approvalApi } from '@/api/approval'
 import { getMaterialVersions, rejectMaterials } from '@/api/supplement-center'
-import type { Application, MaterialFile, ApprovalRecord } from '@/types'
+import { uploadApi } from '@/api/upload'
+import type { Application, MaterialFile, ApprovalRecord, VersionDiff } from '@/types'
 import dayjs from 'dayjs'
 
 const route = useRoute()
@@ -323,7 +505,7 @@ const loading = ref(false)
 const submitting = ref(false)
 const application = ref<Application | null>(null)
 const previewVisible = ref(false)
-const previewFile = ref<MaterialFile | null>(null)
+const currentPreviewFile = ref<MaterialFile | null>(null)
 const previewUrl = ref('')
 
 const versionVisible = ref(false)
@@ -336,6 +518,60 @@ const rejectForm = reactive({
   selectedMap: {} as Record<string, boolean>,
   reasonMap: {} as Record<string, string>,
 })
+
+const compareDialogVisible = ref(false)
+const compareVersions = reactive({ v1Id: null as number | null, v2Id: null as number | null })
+const compareResult = ref<VersionDiff | null>(null)
+const compareLoading = ref(false)
+
+const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp']
+const PDF_EXTENSION = 'pdf'
+
+const canCompare = computed(() => compareVersions.v1Id !== null && compareVersions.v2Id !== null && compareVersions.v1Id !== compareVersions.v2Id)
+
+const getPreviewType = (fileName: string) => {
+  const ext = fileName.split('.').pop()?.toLowerCase()
+  if (IMAGE_EXTENSIONS.includes(ext || '')) return 'image'
+  if (ext === PDF_EXTENSION) return 'pdf'
+  return 'unknown'
+}
+
+const handleCompare = async () => {
+  if (!canCompare.value || !application.value) return
+  const currentFile = versionList.value[0]
+  compareLoading.value = true
+  compareResult.value = null
+  try {
+    compareResult.value = await uploadApi.compareVersions(
+      application.value.id,
+      currentFile.fieldName,
+      compareVersions.v1Id!,
+      compareVersions.v2Id!
+    )
+  } catch (e) {
+    ElMessage.error('版本比对失败')
+  } finally {
+    compareLoading.value = false
+  }
+}
+
+const openCompareDialog = () => {
+  compareVersions.v1Id = null
+  compareVersions.v2Id = null
+  compareResult.value = null
+  compareDialogVisible.value = true
+}
+
+const formatDiffValue = (v: any) => {
+  if (v === null || v === undefined) return '-'
+  if (typeof v === 'boolean') return v ? '是' : '否'
+  if (typeof v === 'number' && v > 1000) {
+    if (v < 1024) return v + ' B'
+    if (v < 1024 * 1024) return (v / 1024).toFixed(2) + ' KB'
+    return (v / (1024 * 1024)).toFixed(2) + ' MB'
+  }
+  return String(v)
+}
 
 const reviewForm = reactive({
   comment: '',
@@ -498,17 +734,14 @@ const doReview = async (action: 'accept' | 'approve' | 'reject' | 'reviewing' | 
   }
 }
 
-const previewImage = (file: MaterialFile) => {
-  previewFile.value = file
+const previewFile = (file: MaterialFile) => {
+  currentPreviewFile.value = file
   previewUrl.value = previewMaterial(file.id)
   previewVisible.value = true
 }
 
-const previewPdf = (file: MaterialFile) => {
-  previewFile.value = file
-  previewUrl.value = previewMaterial(file.id)
-  previewVisible.value = true
-}
+const previewImage = previewFile
+const previewPdf = previewFile
 
 const downloadFile = (file: MaterialFile) => {
   window.open(downloadMaterial(file.id), '_blank')

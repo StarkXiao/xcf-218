@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Param, Delete, UseInterceptors, UploadedFile, UploadedFiles, Body, Res, NotFoundException } from '@nestjs/common';
+import { Controller, Post, Get, Param, Delete, UseInterceptors, UploadedFile, UploadedFiles, Body, Res, NotFoundException, Query, Put } from '@nestjs/common';
 import { FileInterceptor, AnyFilesInterceptor } from '@nestjs/platform-express';
 import { UploadService } from './upload.service';
 import { Response } from 'express';
@@ -41,6 +41,34 @@ export class UploadController {
     return this.service.findByApplicationId(+applicationId);
   }
 
+  @Get('files-current/:applicationId')
+  getCurrentFiles(@Param('applicationId') applicationId: string) {
+    return this.service.findCurrentByApplicationId(+applicationId);
+  }
+
+  @Get('stats/:applicationId')
+  getFileStats(@Param('applicationId') applicationId: string) {
+    return this.service.getFileStats(+applicationId);
+  }
+
+  @Get('versions/:applicationId/:fieldName')
+  getVersions(
+    @Param('applicationId') applicationId: string,
+    @Param('fieldName') fieldName: string,
+  ) {
+    return this.service.getVersions(+applicationId, fieldName);
+  }
+
+  @Get('compare/:applicationId/:fieldName')
+  compareVersions(
+    @Param('applicationId') applicationId: string,
+    @Param('fieldName') fieldName: string,
+    @Query('v1') v1: string,
+    @Query('v2') v2: string,
+  ) {
+    return this.service.compareVersions(+applicationId, fieldName, +v1, +v2);
+  }
+
   @Get('download/:id')
   async downloadFile(@Param('id') id: string, @Res() res: Response) {
     const file = await this.service.findOne(+id);
@@ -66,13 +94,27 @@ export class UploadController {
     }
 
     res.setHeader('Content-Type', file.mimeType);
+    res.setHeader('Cache-Control', 'public, max-age=3600');
     const fileStream = fs.createReadStream(filePath);
     fileStream.pipe(res);
   }
 
+  @Post('reupload/:fileId')
+  @UseInterceptors(FileInterceptor('file'))
+  reuploadFile(
+    @Param('fileId') fileId: string,
+    @UploadedFile() file: Express.Multer.File,
+    @Body() body: { uploaderId: string },
+  ) {
+    return this.service.reuploadFile(+fileId, file, +body.uploaderId);
+  }
+
   @Delete(':id')
-  deleteFile(@Param('id') id: string) {
-    return this.service.deleteFile(+id);
+  deleteFile(
+    @Param('id') id: string,
+    @Query('operatorId') operatorId?: string,
+  ) {
+    return this.service.deleteFile(+id, operatorId ? +operatorId : undefined);
   }
 
   @Get('proxy/:filename')

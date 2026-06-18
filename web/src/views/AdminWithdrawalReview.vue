@@ -101,7 +101,7 @@
           <el-descriptions-item label="申请时间">{{ formatDate(currentWithdrawal.createdAt) }}</el-descriptions-item>
           <el-descriptions-item label="撤回原因" :span="2">{{ currentWithdrawal.reason }}</el-descriptions-item>
           <el-descriptions-item label="当前状态" :span="2">
-            <el-tag :type="currentWithdrawal.status === 'pending' ? 'warning' : (currentWithdrawal.status === 'approved' ? 'success' : 'danger'">
+            <el-tag :type="currentWithdrawal.status === 'pending' ? 'warning' : (currentWithdrawal.status === 'approved' ? 'success' : 'danger')">
               {{ getStatusText(currentWithdrawal.status) }}
             </el-tag>
           </el-descriptions-item>
