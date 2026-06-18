@@ -6,6 +6,8 @@ import { Application } from './entities/application.entity';
 import { ProgressRecord } from './entities/progress-record.entity';
 import { Message } from './entities/message.entity';
 import { MaterialFile } from './entities/material-file.entity';
+import { Schedule } from './entities/schedule.entity';
+import { Appointment } from './entities/appointment.entity';
 import { UserModule } from './modules/user/user.module';
 import { ServiceItemModule } from './modules/service-item/service-item.module';
 import { ApplicationModule } from './modules/application/application.module';
@@ -13,6 +15,8 @@ import { ProgressModule } from './modules/progress/progress.module';
 import { MessageModule } from './modules/message/message.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { UploadModule } from './modules/upload/upload.module';
+import { ScheduleModule } from './modules/schedule/schedule.module';
+import { AppointmentModule } from './modules/appointment/appointment.module';
 import { SeedService } from './seed.service';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -26,13 +30,13 @@ import * as path from 'path';
       username: 'root',
       password: 'root123456',
       database: 'government_service',
-      entities: [User, ServiceItem, Application, ProgressRecord, Message, MaterialFile],
+      entities: [User, ServiceItem, Application, ProgressRecord, Message, MaterialFile, Schedule, Appointment],
       synchronize: true,
       logging: false,
       charset: 'utf8mb4',
       timezone: '+08:00',
     }),
-    TypeOrmModule.forFeature([User, ServiceItem, Application, ProgressRecord, Message, MaterialFile]),
+    TypeOrmModule.forFeature([User, ServiceItem, Application, ProgressRecord, Message, MaterialFile, Schedule, Appointment]),
     UserModule,
     ServiceItemModule,
     ApplicationModule,
@@ -40,6 +44,8 @@ import * as path from 'path';
     MessageModule,
     AdminModule,
     UploadModule,
+    ScheduleModule,
+    AppointmentModule,
   ],
   providers: [SeedService],
 })

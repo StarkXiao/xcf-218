@@ -19,6 +19,33 @@
     </el-row>
 
     <el-row :gutter="20" style="margin-top: 20px">
+      <el-col :span="12">
+        <el-card class="card-hover" shadow="hover" @click="$router.push('/admin/schedule')" style="cursor: pointer">
+          <div class="quick-card">
+            <el-icon :size="40" color="#409eff"><Calendar /></el-icon>
+            <div>
+              <div class="quick-title">排班管理</div>
+              <div class="quick-desc">设置办事事项的可预约时段和容量</div>
+            </div>
+            <el-icon :size="20" color="#c0c4cc"><ArrowRight /></el-icon>
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :span="12">
+        <el-card class="card-hover" shadow="hover" @click="$router.push('/admin/appointments')" style="cursor: pointer">
+          <div class="quick-card">
+            <el-icon :size="40" color="#67c23a"><Tickets /></el-icon>
+            <div>
+              <div class="quick-title">预约办理</div>
+              <div class="quick-desc">处理预约签到、叫号和现场办理</div>
+            </div>
+            <el-icon :size="20" color="#c0c4cc"><ArrowRight /></el-icon>
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
+
+    <el-row :gutter="20" style="margin-top: 20px">
       <el-col :span="24">
         <el-card>
           <template #header>
@@ -159,5 +186,23 @@ onMounted(() => {
   font-size: 13px;
   color: #909399;
   margin-top: 4px;
+}
+.quick-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.quick-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #303133;
+  margin-bottom: 4px;
+}
+.quick-desc {
+  font-size: 13px;
+  color: #909399;
+}
+.quick-card > div:nth-child(2) {
+  flex: 1;
 }
 </style>

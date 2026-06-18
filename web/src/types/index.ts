@@ -82,3 +82,50 @@ export interface Statistics {
   userCount: number
   itemCount: number
 }
+
+export interface Schedule {
+  id: number
+  serviceItemId: number
+  serviceItem?: ServiceItem
+  date: string
+  startTime: string
+  endTime: string
+  capacity: number
+  bookedCount: number
+  active: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface Appointment {
+  id: number
+  appointmentNo: string
+  userId: number
+  user?: User
+  serviceItemId: number
+  serviceItem?: ServiceItem
+  scheduleId: number
+  schedule?: Schedule
+  appointmentDate: string
+  startTime: string
+  endTime: string
+  queueNumber: string
+  status: string
+  applicationId?: number
+  application?: Application
+  remark?: string
+  checkInTime?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface AppointmentStats {
+  serviceItemId: number
+  serviceItemName: string
+  total: number
+  pending: number
+  checked_in: number
+  completed: number
+  cancelled: number
+  no_show: number
+}

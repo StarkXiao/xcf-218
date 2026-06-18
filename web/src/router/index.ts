@@ -31,10 +31,22 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '事项详情' },
       },
       {
+        path: 'book/:id',
+        name: 'BookAppointment',
+        component: () => import('@/views/BookAppointment.vue'),
+        meta: { title: '预约取号' },
+      },
+      {
         path: 'apply/:id',
         name: 'Apply',
         component: () => import('@/views/Apply.vue'),
         meta: { title: '材料提交' },
+      },
+      {
+        path: 'my-appointments',
+        name: 'MyAppointments',
+        component: () => import('@/views/MyAppointments.vue'),
+        meta: { title: '我的预约' },
       },
       {
         path: 'my-applications',
@@ -59,6 +71,18 @@ const routes: RouteRecordRaw[] = [
         name: 'Admin',
         component: () => import('@/views/AdminDashboard.vue'),
         meta: { title: '管理后台', admin: true },
+      },
+      {
+        path: 'admin/schedule',
+        name: 'AdminSchedule',
+        component: () => import('@/views/AdminSchedule.vue'),
+        meta: { title: '排班管理', admin: true },
+      },
+      {
+        path: 'admin/appointments',
+        name: 'AdminAppointments',
+        component: () => import('@/views/AdminAppointments.vue'),
+        meta: { title: '预约办理', admin: true },
       },
       {
         path: 'admin/review/:id',

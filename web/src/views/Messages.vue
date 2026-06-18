@@ -21,8 +21,8 @@
         </el-table-column>
         <el-table-column label="类型" width="100">
           <template #default="{ row }">
-            <el-tag :type="row.type === 'application' ? 'primary' : 'info'" size="small">
-              {{ row.type === 'application' ? '申请通知' : '系统通知' }}
+            <el-tag :type="getMessageType(row.type)" size="small">
+              {{ getMessageTypeText(row.type) }}
             </el-tag>
           </template>
         </el-table-column>
@@ -77,6 +77,24 @@ const loading = ref(false)
 const messages = ref<Message[]>([])
 
 const hasUnread = computed(() => messages.value.some(m => !m.read))
+
+const getMessageType = (type: string) => {
+  const map: Record<string, string> = {
+    application: 'primary',
+    appointment: 'success',
+    system: 'info',
+  }
+  return map[type] || 'info'
+}
+
+const getMessageTypeText = (type: string) => {
+  const map: Record<string, string> = {
+    application: '申请通知',
+    appointment: '预约通知',
+    system: '系统通知',
+  }
+  return map[type] || '系统通知'
+}
 
 const formatDate = (date: string) => dayjs(date).format('YYYY-MM-DD HH:mm:ss')
 

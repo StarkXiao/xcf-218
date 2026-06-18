@@ -49,6 +49,10 @@
             <el-icon><Search /></el-icon>
             <span>事项查询</span>
           </el-menu-item>
+          <el-menu-item index="/my-appointments">
+            <el-icon><Calendar /></el-icon>
+            <span>我的预约</span>
+          </el-menu-item>
           <el-menu-item index="/my-applications">
             <el-icon><List /></el-icon>
             <span>进度跟踪</span>
@@ -89,7 +93,10 @@ const unreadCount = ref(0)
 
 const activeMenu = computed(() => {
   if (route.path.startsWith('/services')) return '/services'
+  if (route.path.startsWith('/book')) return '/services'
   if (route.path.startsWith('/apply')) return '/services'
+  if (route.path.startsWith('/admin/schedule')) return '/admin'
+  if (route.path.startsWith('/admin/appointments')) return '/admin'
   if (route.path.startsWith('/admin')) return '/admin'
   return route.path
 })

@@ -21,9 +21,14 @@
               <span class="value">{{ item.processingDays }} 个工作日</span>
             </div>
           </div>
-          <el-button type="primary" size="large" @click="goApply">
-            <el-icon><EditPen /></el-icon> 立即办理
-          </el-button>
+          <div class="action-buttons">
+            <el-button type="success" size="large" @click="goBook">
+              <el-icon><Calendar /></el-icon> 预约取号
+            </el-button>
+            <el-button type="primary" size="large" @click="goApply">
+              <el-icon><EditPen /></el-icon> 直接办理
+            </el-button>
+          </div>
         </div>
       </div>
 
@@ -86,6 +91,10 @@ const loadItem = async () => {
   }
 }
 
+const goBook = () => {
+  router.push(`/book/${route.params.id}`)
+}
+
 const goApply = () => {
   router.push(`/apply/${route.params.id}`)
 }
@@ -114,6 +123,10 @@ onMounted(loadItem)
   flex-direction: column;
   align-items: flex-end;
   gap: 16px;
+}
+.action-buttons {
+  display: flex;
+  gap: 12px;
 }
 .processing-info {
   display: flex;

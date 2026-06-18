@@ -10,6 +10,15 @@
         <el-tag type="info">{{ item.processingDays }} 个工作日</el-tag>
       </div>
 
+      <el-alert
+        v-if="appointmentId"
+        title="您已有预约，提交申请后将自动关联预约信息"
+        type="success"
+        :closable="false"
+        show-icon
+        style="margin-bottom: 24px"
+      />
+
       <el-steps :active="1" finish-status="success" style="margin-bottom: 40px">
         <el-step title="填写信息" />
         <el-step title="提交材料" />
@@ -100,6 +109,7 @@ import { Upload } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 import { getServiceItemById } from '@/api/service-item'
 import { createApplication } from '@/api/application'
+import { linkAppointmentApplication } from '@/api/appointment'
 import type { ServiceItem } from '@/types'
 
 const route = useRoute()
@@ -112,6 +122,7 @@ const item = ref<ServiceItem | null>(null)
 const formRef = ref<FormInstance>()
 const materialList = ref<any[]>([])
 const uploadedFiles = ref<UploadFile[][]>([])
+const appointmentId = ref<number | null>(null)
 
 const formData = reactive({
   name: '',
@@ -165,6 +176,9 @@ const handleFileRemove = (index: number) => {
 const loadItem = async () => {
   loading.value = true
   try {
+    if (route.query.appointmentId) {
+      appointmentId.value = Number(route.query.appointmentId)
+    }
     item.value = await getServiceItemById(Number(route.params.id))
     if (item.value?.materials) {
       try {
@@ -212,7 +226,12 @@ const handleSubmit = async () => {
   submitting.value = true
   try {
     const result = await createApplication(formDataObj)
-    ElMessage.success('申请提交成功，材料已上传')
+    if (appointmentId.value) {
+      await linkAppointmentApplication(appointmentId.value, result.id)
+      ElMessage.success('申请提交成功，已关联预约信息')
+    } else {
+      ElMessage.success('申请提交成功，材料已上传')
+    }
     router.push(`/applications/${result.id}`)
   } finally {
     submitting.value = false
