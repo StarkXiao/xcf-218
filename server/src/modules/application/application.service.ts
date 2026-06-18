@@ -1,11 +1,26 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { Application } from '../../entities/application.entity';
 import { ProgressRecord } from '../../entities/progress-record.entity';
 import { Message } from '../../entities/message.entity';
+import { MaterialFile } from '../../entities/material-file.entity';
 import { ServiceItem } from '../../entities/service-item.entity';
 import { User } from '../../entities/user.entity';
+
+interface MaterialInfo {
+  name: string;
+  required: boolean;
+  fieldName: string;
+}
+
+interface CreateApplicationData {
+  userId: number;
+  serviceItemId: number;
+  formData: any;
+  materialsInfo: MaterialInfo[];
+  files: Express.Multer.File[];
+}
 
 @Injectable()
 export class ApplicationService {
@@ -13,8 +28,10 @@ export class ApplicationService {
     @InjectRepository(Application) private readonly appRepository: Repository<Application>,
     @InjectRepository(ProgressRecord) private readonly progressRepository: Repository<ProgressRecord>,
     @InjectRepository(Message) private readonly messageRepository: Repository<Message>,
+    @InjectRepository(MaterialFile) private readonly fileRepository: Repository<MaterialFile>,
     @InjectRepository(ServiceItem) private readonly itemRepository: Repository<ServiceItem>,
     @InjectRepository(User) private readonly userRepository: Repository<User>,
+    private readonly dataSource: DataSource,
   ) {}
 
   generateApplicationNo() {
@@ -26,63 +43,84 @@ export class ApplicationService {
     return `BS${y}${m}${d}${rand}`;
   }
 
-  async create(data: {
-    userId: number;
-    serviceItemId: number;
-    formData: any;
-    materials?: any[];
-  }) {
-    const item = await this.itemRepository.findOne({ where: { id: data.serviceItemId } });
-    if (!item) {
-      throw new NotFoundException('办事事项不存在');
+  async create(data: CreateApplicationData) {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const item = await this.itemRepository.findOne({ where: { id: data.serviceItemId } });
+      if (!item) {
+        throw new NotFoundException('办事事项不存在');
+      }
+      const user = await this.userRepository.findOne({ where: { id: data.userId } });
+      if (!user) {
+        throw new NotFoundException('用户不存在');
+      }
+
+      const applicationNo = this.generateApplicationNo();
+      const application = this.appRepository.create({
+        applicationNo,
+        userId: data.userId,
+        serviceItemId: data.serviceItemId,
+        formData: JSON.stringify(data.formData),
+        materials: JSON.stringify(data.materialsInfo),
+        status: 'submitted',
+      });
+
+      const savedApp = await queryRunner.manager.save(application);
+
+      for (const file of data.files) {
+        const fieldName = file.fieldname;
+        const materialInfo = data.materialsInfo.find(m => m.fieldName === fieldName);
+        if (materialInfo) {
+          const materialFile = this.fileRepository.create({
+            applicationId: savedApp.id,
+            materialName: materialInfo.name,
+            originalName: file.originalname,
+            fileName: file.filename,
+            filePath: file.path,
+            fileSize: file.size,
+            mimeType: file.mimetype,
+            required: materialInfo.required,
+          });
+          await queryRunner.manager.save(materialFile);
+        }
+      }
+
+      await queryRunner.manager.save(ProgressRecord, {
+        applicationId: savedApp.id,
+        step: '提交申请',
+        status: 'completed',
+        remark: '用户已成功提交申请材料',
+        operatorId: data.userId,
+      });
+
+      await queryRunner.manager.save(Message, {
+        userId: data.userId,
+        title: '申请提交成功',
+        content: `您的申请（编号：${applicationNo}）已成功提交，我们将尽快为您处理。事项：${item.name}`,
+        type: 'application',
+        applicationId: savedApp.id,
+      });
+
+      await queryRunner.commitTransaction();
+      return this.findOne(savedApp.id);
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
     }
-    const user = await this.userRepository.findOne({ where: { id: data.userId } });
-    if (!user) {
-      throw new NotFoundException('用户不存在');
-    }
-
-    const applicationNo = this.generateApplicationNo();
-    const application = this.appRepository.create({
-      applicationNo,
-      userId: data.userId,
-      serviceItemId: data.serviceItemId,
-      formData: JSON.stringify(data.formData),
-      materials: data.materials ? JSON.stringify(data.materials) : null,
-      status: 'submitted',
-    });
-
-    const saved = await this.appRepository.save(application);
-
-    await this.progressRepository.save({
-      applicationId: saved.id,
-      step: '提交申请',
-      status: 'completed',
-      remark: '用户已成功提交申请材料',
-      operatorId: data.userId,
-    });
-
-    await this.messageRepository.save({
-      userId: data.userId,
-      title: '申请提交成功',
-      content: `您的申请（编号：${applicationNo}）已成功提交，我们将尽快为您处理。事项：${item.name}`,
-      type: 'application',
-      applicationId: saved.id,
-    });
-
-    return this.findOne(saved.id);
   }
 
   async findByUserId(userId: number) {
     const apps = await this.appRepository.find({
       where: { userId },
-      relations: ['serviceItem'],
+      relations: ['serviceItem', 'materialFiles'],
       order: { createdAt: 'DESC' },
     });
-    return apps.map(a => ({
-      ...a,
-      formData: JSON.parse(a.formData),
-      materials: a.materials ? JSON.parse(a.materials) : [],
-    }));
+    return apps.map(a => this.transformApplication(a));
   }
 
   async findAll(status?: string) {
@@ -90,30 +128,32 @@ export class ApplicationService {
     if (status) where.status = status;
     const apps = await this.appRepository.find({
       where,
-      relations: ['user', 'serviceItem'],
+      relations: ['user', 'serviceItem', 'materialFiles'],
       order: { createdAt: 'DESC' },
     });
-    return apps.map(a => ({
-      ...a,
-      formData: JSON.parse(a.formData),
-      materials: a.materials ? JSON.parse(a.materials) : [],
-      password: undefined,
-      user: a.user ? { ...a.user, password: undefined } : null,
-    }));
+    return apps.map(a => this.transformApplication(a, true));
   }
 
   async findOne(id: number) {
     const app = await this.appRepository.findOne({
       where: { id },
-      relations: ['serviceItem', 'user', 'progressRecords'],
+      relations: ['serviceItem', 'user', 'progressRecords', 'materialFiles'],
     });
     if (!app) throw new NotFoundException('申请不存在');
-    return {
+    return this.transformApplication(app, true);
+  }
+
+  private transformApplication(app: Application, includeUser = false) {
+    const result: any = {
       ...app,
       formData: JSON.parse(app.formData),
       materials: app.materials ? JSON.parse(app.materials) : [],
-      user: app.user ? { ...app.user, password: undefined } : null,
+      materialFiles: app.materialFiles || [],
     };
+    if (includeUser && app.user) {
+      result.user = { ...app.user, password: undefined };
+    }
+    return result;
   }
 
   async updateStatus(id: number, status: string, comment?: string, reviewerId?: number) {

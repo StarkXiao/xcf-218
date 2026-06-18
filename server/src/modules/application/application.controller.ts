@@ -1,4 +1,5 @@
-import { Controller, Post, Get, Param, Body, Put, Query } from '@nestjs/common';
+import { Controller, Post, Get, Param, Body, Put, Query, UseInterceptors, UploadedFiles } from '@nestjs/common';
+import { AnyFilesInterceptor } from '@nestjs/platform-express';
 import { ApplicationService } from './application.service';
 
 @Controller('applications')
@@ -6,13 +7,23 @@ export class ApplicationController {
   constructor(private readonly service: ApplicationService) {}
 
   @Post()
-  create(@Body() body: {
-    userId: number;
-    serviceItemId: number;
-    formData: any;
-    materials?: any[];
-  }) {
-    return this.service.create(body);
+  @UseInterceptors(AnyFilesInterceptor())
+  create(
+    @UploadedFiles() files: Express.Multer.File[],
+    @Body() body: {
+      userId: string;
+      serviceItemId: string;
+      formData: string;
+      materialsInfo: string;
+    },
+  ) {
+    return this.service.create({
+      userId: Number(body.userId),
+      serviceItemId: Number(body.serviceItemId),
+      formData: JSON.parse(body.formData),
+      materialsInfo: JSON.parse(body.materialsInfo || '[]'),
+      files,
+    });
   }
 
   @Get()

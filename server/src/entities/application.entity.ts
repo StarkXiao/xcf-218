@@ -2,6 +2,7 @@ import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateCol
 import { User } from './user.entity';
 import { ServiceItem } from './service-item.entity';
 import { ProgressRecord } from './progress-record.entity';
+import { MaterialFile } from './material-file.entity';
 
 @Entity('applications')
 export class Application {
@@ -42,6 +43,9 @@ export class Application {
 
   @OneToMany(() => ProgressRecord, record => record.application)
   progressRecords: ProgressRecord[];
+
+  @OneToMany(() => MaterialFile, file => file.application)
+  materialFiles: MaterialFile[];
 
   @CreateDateColumn()
   createdAt: Date;

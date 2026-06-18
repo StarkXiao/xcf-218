@@ -57,8 +57,8 @@
           v-for="(mat, index) in materialList"
           :key="mat.name"
           :label="mat.name"
-          :prop="`materials.${index}`"
-          :rules="mat.required ? [{ required: true, message: `请上传${mat.name}`, trigger: 'change' }] : []"
+          :prop="`material_${index}`"
+          :rules="mat.required ? [{ required: true, validator: validateMaterial(index), trigger: 'change' }] : []"
         >
           <el-upload
             v-model:file-list="uploadedFiles[index]"
@@ -75,6 +75,10 @@
             </template>
           </el-upload>
           <span v-if="mat.required" style="color: #f56c6c; margin-left: 8px">*</span>
+          <div v-if="uploadedFiles[index]?.[0]" class="file-info">
+            <el-icon color="#67c23a"><Check /></el-icon>
+            <span>{{ uploadedFiles[index][0].name }} ({{ formatFileSize(uploadedFiles[index][0].size) }})</span>
+          </div>
         </el-form-item>
 
         <el-form-item>
@@ -91,7 +95,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage, type FormInstance, type FormRules, type UploadFile } from 'element-plus'
+import { ElMessage, type FormInstance, type FormRules, type UploadFile, type UploadProps } from 'element-plus'
 import { Upload } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 import { getServiceItemById } from '@/api/service-item'
@@ -129,6 +133,22 @@ const formRules: FormRules = {
   ],
   address: [{ required: true, message: '请输入联系地址', trigger: 'blur' }],
   reason: [{ required: true, message: '请输入申请事由', trigger: 'blur' }],
+}
+
+const validateMaterial = (index: number) => {
+  return (_rule: any, _value: any, callback: any) => {
+    if (!uploadedFiles.value[index] || uploadedFiles.value[index].length === 0) {
+      callback(new Error('请上传材料'))
+    } else {
+      callback()
+    }
+  }
+}
+
+const formatFileSize = (bytes: number) => {
+  if (bytes < 1024) return bytes + ' B'
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB'
+  return (bytes / (1024 * 1024)).toFixed(2) + ' MB'
 }
 
 const handleFileChange = (index: number, file: UploadFile) => {
@@ -169,22 +189,30 @@ const handleSubmit = async () => {
   const valid = await formRef.value.validate().catch(() => false)
   if (!valid) return
 
-  const materials = materialList.value.map((m, i) => ({
+  const formDataObj = new FormData()
+
+  formDataObj.append('userId', String(userStore.user.id))
+  formDataObj.append('serviceItemId', String(route.params.id))
+  formDataObj.append('formData', JSON.stringify({ ...formData }))
+
+  const materialsInfo = materialList.value.map((m, i) => ({
     name: m.name,
     required: m.required,
-    uploaded: uploadedFiles.value[i] && uploadedFiles.value[i].length > 0,
-    fileName: uploadedFiles.value[i]?.[0]?.name || '',
+    fieldName: `material_${i}`,
   }))
+  formDataObj.append('materialsInfo', JSON.stringify(materialsInfo))
+
+  for (let i = 0; i < materialList.value.length; i++) {
+    const files = uploadedFiles.value[i]
+    if (files && files.length > 0 && files[0].raw) {
+      formDataObj.append(`material_${i}`, files[0].raw, files[0].name)
+    }
+  }
 
   submitting.value = true
   try {
-    const result = await createApplication({
-      userId: userStore.user.id,
-      serviceItemId: Number(route.params.id),
-      formData: { ...formData },
-      materials,
-    })
-    ElMessage.success('申请提交成功')
+    const result = await createApplication(formDataObj)
+    ElMessage.success('申请提交成功，材料已上传')
     router.push(`/applications/${result.id}`)
   } finally {
     submitting.value = false
@@ -210,5 +238,13 @@ onMounted(loadItem)
   display: flex;
   align-items: center;
   gap: 4px;
+}
+.file-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 13px;
+  color: #67c23a;
 }
 </style>

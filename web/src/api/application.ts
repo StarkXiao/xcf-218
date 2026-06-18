@@ -1,13 +1,12 @@
 import request from '@/utils/request'
 import type { Application } from '@/types'
 
-export const createApplication = (data: {
-  userId: number
-  serviceItemId: number
-  formData: any
-  materials?: any[]
-}) => {
-  return request.post<any, Application>('/applications', data)
+export const createApplication = (formData: FormData) => {
+  return request.post<any, Application>('/applications', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  })
 }
 
 export const getApplications = (userId?: number, status?: string) => {
@@ -25,4 +24,12 @@ export const updateApplicationStatus = (
   reviewerId?: number
 ) => {
   return request.put<any, Application>(`/applications/${id}/status`, { status, comment, reviewerId })
+}
+
+export const downloadMaterial = (fileId: number) => {
+  return `/api/upload/download/${fileId}`
+}
+
+export const previewMaterial = (fileId: number) => {
+  return `/api/upload/preview/${fileId}`
 }

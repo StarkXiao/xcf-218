@@ -1,21 +1,16 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { MulterModule } from '@nestjs/platform-express';
-import { Application } from '../../entities/application.entity';
-import { ProgressRecord } from '../../entities/progress-record.entity';
-import { Message } from '../../entities/message.entity';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { MaterialFile } from '../../entities/material-file.entity';
-import { ServiceItem } from '../../entities/service-item.entity';
-import { User } from '../../entities/user.entity';
-import { ApplicationController } from './application.controller';
-import { ApplicationService } from './application.service';
+import { UploadController } from './upload.controller';
+import { UploadService } from './upload.service';
 import { diskStorage } from 'multer';
 import * as path from 'path';
 import * as fs from 'fs';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Application, ProgressRecord, Message, MaterialFile, ServiceItem, User]),
+    TypeOrmModule.forFeature([MaterialFile]),
     MulterModule.register({
       storage: diskStorage({
         destination: (req, file, cb) => {
@@ -51,8 +46,8 @@ import * as fs from 'fs';
       },
     }),
   ],
-  controllers: [ApplicationController],
-  providers: [ApplicationService],
-  exports: [ApplicationService],
+  controllers: [UploadController],
+  providers: [UploadService],
+  exports: [UploadService],
 })
-export class ApplicationModule {}
+export class UploadModule {}

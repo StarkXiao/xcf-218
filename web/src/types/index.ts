@@ -20,11 +20,17 @@ export interface ServiceItem {
   active: boolean
 }
 
-export interface Material {
-  name: string
+export interface MaterialFile {
+  id: number
+  applicationId: number
+  materialName: string
+  originalName: string
+  fileName: string
+  filePath: string
+  fileSize: number
+  mimeType: string
   required: boolean
-  uploaded?: boolean
-  file?: File
+  createdAt: string
 }
 
 export interface Application {
@@ -36,6 +42,7 @@ export interface Application {
   user?: User
   formData: any
   materials: any[]
+  materialFiles: MaterialFile[]
   status: string
   reviewerId?: number
   reviewComment?: string
