@@ -13,7 +13,7 @@ export class AdminController {
   @Post('applications/:id/review')
   reviewApplication(
     @Param('id') id: string,
-    @Body() body: { action: 'approve' | 'reject' | 'reviewing' | 'complete'; comment: string; reviewerId: number },
+    @Body() body: { action: 'accept' | 'approve' | 'reject' | 'reviewing' | 'complete'; comment: string; reviewerId: number },
   ) {
     return this.service.reviewApplication(+id, body.action, body.comment, body.reviewerId);
   }

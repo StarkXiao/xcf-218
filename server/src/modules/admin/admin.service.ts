@@ -24,6 +24,7 @@ export class AdminService {
   async getStatistics() {
     const totalApplications = await this.appRepository.count();
     const pendingCount = await this.appRepository.count({ where: { status: 'submitted' } });
+    const acceptedCount = await this.appRepository.count({ where: { status: 'accepted' } });
     const reviewingCount = await this.appRepository.count({ where: { status: 'reviewing' } });
     const approvedCount = await this.appRepository.count({ where: { status: 'approved' } });
     const rejectedCount = await this.appRepository.count({ where: { status: 'rejected' } });
@@ -35,6 +36,7 @@ export class AdminService {
     return {
       totalApplications,
       pendingCount,
+      acceptedCount,
       reviewingCount,
       approvedCount,
       rejectedCount,
@@ -47,7 +49,7 @@ export class AdminService {
 
   async reviewApplication(
     id: number,
-    action: 'approve' | 'reject' | 'reviewing' | 'complete',
+    action: 'accept' | 'approve' | 'reject' | 'reviewing' | 'complete',
     comment: string,
     reviewerId: number,
   ) {
@@ -79,6 +81,7 @@ export class AdminService {
     }
 
     const statusMap: Record<string, string> = {
+      accept: 'accepted',
       approve: 'approved',
       reject: 'rejected',
       reviewing: 'reviewing',
@@ -86,13 +89,105 @@ export class AdminService {
     };
 
     const stepMap: Record<string, string> = {
+      accept: '受理申请',
       approve: '审核通过',
       reject: '审核驳回',
       reviewing: '材料审核',
-      complete: '办理完成',
+      complete: '办结完成',
     };
 
-    app.status = statusMap[action];
+    const progressStatusMap: Record<string, string> = {
+      accept: 'completed',
+      approve: 'completed',
+      reject: 'failed',
+      reviewing: 'processing',
+      complete: 'completed',
+    };
+
+    const newStatus = statusMap[action];
+
+    if (action === 'reviewing') {
+      const hasAcceptRecord = await this.progressRepository.findOne({
+        where: { applicationId: id, step: '受理申请' },
+      });
+      if (!hasAcceptRecord) {
+        await this.progressRepository.save({
+          applicationId: id,
+          step: '受理申请',
+          status: 'completed',
+          remark: '系统自动受理',
+          operatorId: reviewerId,
+        });
+      }
+    }
+
+    if (action === 'approve' || action === 'reject') {
+      const hasReviewingRecord = await this.progressRepository.findOne({
+        where: { applicationId: id, step: '材料审核' },
+      });
+      if (!hasReviewingRecord) {
+        const hasAcceptRecord = await this.progressRepository.findOne({
+          where: { applicationId: id, step: '受理申请' },
+        });
+        if (!hasAcceptRecord) {
+          await this.progressRepository.save({
+            applicationId: id,
+            step: '受理申请',
+            status: 'completed',
+            remark: '系统自动受理',
+            operatorId: reviewerId,
+          });
+        }
+        await this.progressRepository.save({
+          applicationId: id,
+          step: '材料审核',
+          status: 'completed',
+          remark: '审核完成',
+          operatorId: reviewerId,
+        });
+      }
+    }
+
+    if (action === 'complete') {
+      const hasApproveRecord = await this.progressRepository.findOne({
+        where: { applicationId: id, step: '审核通过' },
+      });
+      if (!hasApproveRecord) {
+        const hasReviewingRecord = await this.progressRepository.findOne({
+          where: { applicationId: id, step: '材料审核' },
+        });
+        if (!hasReviewingRecord) {
+          const hasAcceptRecord = await this.progressRepository.findOne({
+            where: { applicationId: id, step: '受理申请' },
+          });
+          if (!hasAcceptRecord) {
+            await this.progressRepository.save({
+              applicationId: id,
+              step: '受理申请',
+              status: 'completed',
+              remark: '系统自动受理',
+              operatorId: reviewerId,
+            });
+          }
+          await this.progressRepository.save({
+            applicationId: id,
+            step: '材料审核',
+            status: 'completed',
+            remark: '审核完成',
+            operatorId: reviewerId,
+          });
+        }
+        await this.progressRepository.save({
+          applicationId: id,
+          step: '审核通过',
+          status: 'completed',
+          remark: '审核通过',
+          operatorId: reviewerId,
+        });
+      }
+    }
+
+    app.status = newStatus;
     app.reviewComment = comment;
     app.reviewerId = reviewerId;
     await this.appRepository.save(app);
@@ -100,22 +195,31 @@ export class AdminService {
     await this.progressRepository.save({
       applicationId: id,
       step: stepMap[action],
-      status: action === 'reject' ? 'failed' : 'completed',
+      status: progressStatusMap[action],
       remark: comment,
       operatorId: reviewerId,
     });
 
     const titleMap: Record<string, string> = {
+      accept: '申请已受理',
       approve: '申请审核通过',
       reject: '申请被驳回',
       reviewing: '申请进入审核阶段',
       complete: '申请已办理完成',
     };
 
+    const contentMap: Record<string, string> = {
+      accept: `您的申请（编号：${app.applicationNo}）已受理，我们将尽快为您审核。`,
+      approve: `恭喜！您的申请（编号：${app.applicationNo}）已审核通过。${comment ? '审核意见：' + comment : ''}`,
+      reject: `很遗憾，您的申请（编号：${app.applicationNo}）被驳回。${comment ? '驳回原因：' + comment : ''}您可在申请详情页选择"重新提交"。`,
+      reviewing: `您的申请（编号：${app.applicationNo}）已进入审核阶段，请耐心等待结果。`,
+      complete: `您的申请（编号：${app.applicationNo}）已办理完成，感谢您的使用。`,
+    };
+
     await this.messageRepository.save({
       userId: app.userId,
       title: titleMap[action],
-      content: comment || `您的申请（编号：${app.applicationNo}）状态已更新。`,
+      content: contentMap[action] || `您的申请（编号：${app.applicationNo}）状态已更新。`,
       type: 'application',
       applicationId: id,
     });

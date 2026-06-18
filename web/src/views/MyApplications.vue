@@ -27,6 +27,7 @@
         <el-form-item label="状态">
           <el-select v-model="filterForm.status" placeholder="全部状态" clearable style="width: 150px">
             <el-option label="已提交" value="submitted" />
+            <el-option label="已受理" value="accepted" />
             <el-option label="审核中" value="reviewing" />
             <el-option label="待补件" value="supplementing" />
             <el-option label="撤回待审批" value="withdraw_pending" />
@@ -292,6 +293,7 @@ const pagedApplications = computed(() => {
 const getStatusType = (status: string) => {
   const map: Record<string, string> = {
     submitted: 'warning',
+    accepted: 'info',
     reviewing: 'primary',
     approved: 'success',
     rejected: 'danger',
@@ -306,6 +308,7 @@ const getStatusType = (status: string) => {
 const getStatusText = (status: string) => {
   const map: Record<string, string> = {
     submitted: '已提交',
+    accepted: '已受理',
     reviewing: '审核中',
     approved: '已通过',
     rejected: '已驳回',

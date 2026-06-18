@@ -192,15 +192,17 @@ const quickLinks = [
 ]
 
 const myAppCount = computed(() => recentApps.value.length)
-const pendingCount = computed(() => recentApps.value.filter(a => a.status === 'submitted' || a.status === 'reviewing').length)
+const pendingCount = computed(() => recentApps.value.filter(a => ['submitted', 'accepted', 'reviewing', 'supplementing'].includes(a.status)).length)
 
 const getStatusType = (status: string) => {
   const map: Record<string, string> = {
     submitted: 'warning',
+    accepted: 'info',
     reviewing: 'primary',
     approved: 'success',
     rejected: 'danger',
     completed: 'success',
+    supplementing: 'warning',
   }
   return map[status] || 'info'
 }
@@ -208,10 +210,12 @@ const getStatusType = (status: string) => {
 const getStatusText = (status: string) => {
   const map: Record<string, string> = {
     submitted: '已提交',
+    accepted: '已受理',
     reviewing: '审核中',
     approved: '已通过',
     rejected: '已驳回',
     completed: '已完成',
+    supplementing: '待补件',
   }
   return map[status] || status
 }

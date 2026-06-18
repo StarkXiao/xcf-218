@@ -7,7 +7,7 @@ export const getStatistics = () => {
 
 export const reviewApplication = (
   id: number,
-  action: 'approve' | 'reject' | 'reviewing' | 'complete',
+  action: 'accept' | 'approve' | 'reject' | 'reviewing' | 'complete',
   comment: string,
   reviewerId: number
 ) => {

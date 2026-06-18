@@ -505,6 +505,7 @@ const sortedRecords = computed(() => {
 const getStatusType = (status: string) => {
   const map: Record<string, string> = {
     submitted: 'warning',
+    accepted: 'info',
     reviewing: 'primary',
     approved: 'success',
     rejected: 'danger',
@@ -519,6 +520,7 @@ const getStatusType = (status: string) => {
 const getStatusText = (status: string) => {
   const map: Record<string, string> = {
     submitted: '已提交',
+    accepted: '已受理',
     reviewing: '审核中',
     approved: '已通过',
     rejected: '已驳回',

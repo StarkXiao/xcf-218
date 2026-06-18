@@ -78,6 +78,7 @@
               <el-select v-model="filterStatus" placeholder="全部状态" style="width: 140px" @change="loadApplications">
                 <el-option label="全部" value="" />
                 <el-option label="待审核" value="submitted" />
+                <el-option label="已受理" value="accepted" />
                 <el-option label="审核中" value="reviewing" />
                 <el-option label="待补件" value="supplementing" />
                 <el-option label="已通过" value="approved" />
@@ -136,6 +137,7 @@ import {
   ArrowRight,
   Refresh,
   UserFilled,
+  Reading,
 } from '@element-plus/icons-vue'
 import dayjs from 'dayjs'
 
@@ -147,6 +149,7 @@ const filterStatus = ref('')
 const stats = computed(() => [
   { key: 'total', label: '申请总数', value: statistics.value?.totalApplications || 0, icon: Document, color: '#409eff' },
   { key: 'pending', label: '待审核', value: statistics.value?.pendingCount || 0, icon: Clock, color: '#e6a23c' },
+  { key: 'accepted', label: '已受理', value: statistics.value?.acceptedCount || 0, icon: Reading, color: '#909399' },
   { key: 'reviewing', label: '审核中', value: statistics.value?.reviewingCount || 0, icon: Loading, color: '#909399' },
   { key: 'supplementing', label: '待补件', value: statistics.value?.supplementingCount || 0, icon: Refresh, color: '#e6a23c' },
   { key: 'approved', label: '已通过', value: statistics.value?.approvedCount || 0, icon: CircleCheck, color: '#67c23a' },
@@ -159,6 +162,7 @@ const stats = computed(() => [
 const getStatusType = (status: string) => {
   const map: Record<string, string> = {
     submitted: 'warning',
+    accepted: 'info',
     reviewing: 'primary',
     approved: 'success',
     rejected: 'danger',
@@ -171,6 +175,7 @@ const getStatusType = (status: string) => {
 const getStatusText = (status: string) => {
   const map: Record<string, string> = {
     submitted: '待审核',
+    accepted: '已受理',
     reviewing: '审核中',
     approved: '已通过',
     rejected: '已驳回',

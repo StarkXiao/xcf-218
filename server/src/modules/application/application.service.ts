@@ -178,10 +178,10 @@ export class ApplicationService {
         throw new UnauthorizedException('无权操作此申请');
       }
 
-      const ALLOWED_WITHDRAW_STATUSES = ['submitted', 'reviewing', 'supplementing'];
+      const ALLOWED_WITHDRAW_STATUSES = ['submitted', 'accepted', 'reviewing', 'supplementing'];
       if (!ALLOWED_WITHDRAW_STATUSES.includes(app.status)) {
         throw new BadRequestException(
-          `当前状态（${this.getStatusLabel(app.status)}）不允许撤回申请。允许撤回的状态：待审核、审核中、材料补充中`,
+          `当前状态（${this.getStatusLabel(app.status)}）不允许撤回申请。允许撤回的状态：待审核、已受理、审核中、材料补充中`,
         );
       }
 
@@ -565,7 +565,7 @@ export class ApplicationService {
     if (app.userId !== userId) {
       return { canWithdraw: false, reason: '无权操作此申请' };
     }
-    const ALLOWED_STATUSES = ['submitted', 'reviewing', 'supplementing'];
+    const ALLOWED_STATUSES = ['submitted', 'accepted', 'reviewing', 'supplementing'];
     if (!ALLOWED_STATUSES.includes(app.status)) {
       return { canWithdraw: false, reason: `当前状态不允许撤回` };
     }
@@ -630,6 +630,7 @@ export class ApplicationService {
     const labels: Record<string, string> = {
       pending: '草稿',
       submitted: '待审核',
+      accepted: '已受理',
       reviewing: '审核中',
       approved: '审核通过',
       rejected: '已驳回',
@@ -705,7 +706,7 @@ export class ApplicationService {
     const app = await this.appRepository.findOne({ where: { id }, relations: ['serviceItem'] });
     if (!app) throw new NotFoundException('申请不存在');
 
-    const validStatuses = ['submitted', 'reviewing', 'approved', 'rejected', 'completed', 'supplementing'];
+    const validStatuses = ['submitted', 'accepted', 'reviewing', 'approved', 'rejected', 'completed', 'supplementing'];
     if (!validStatuses.includes(status)) {
       throw new BadRequestException('无效的状态');
     }
@@ -718,6 +719,7 @@ export class ApplicationService {
     await this.appRepository.save(app);
 
     const stepMap: Record<string, string> = {
+      accepted: '受理申请',
       reviewing: '材料审核',
       approved: '审核通过',
       rejected: '审核驳回',
@@ -725,17 +727,27 @@ export class ApplicationService {
       supplementing: '材料退回',
     };
 
+    const progressStatusMap: Record<string, string> = {
+      accepted: 'completed',
+      reviewing: 'processing',
+      approved: 'completed',
+      rejected: 'failed',
+      completed: 'completed',
+      supplementing: 'processing',
+    };
+
     if (stepMap[status]) {
       await this.progressRepository.save({
         applicationId: id,
         step: stepMap[status],
-        status: status === 'rejected' ? 'failed' : 'completed',
+        status: progressStatusMap[status],
         remark: comment || '',
         operatorId: reviewerId,
       });
     }
 
     const titleMap: Record<string, string> = {
+      accepted: '申请已受理',
       reviewing: '申请进入审核阶段',
       approved: '申请审核通过',
       rejected: '申请被驳回',
@@ -744,6 +756,7 @@ export class ApplicationService {
     };
 
     const contentMap: Record<string, string> = {
+      accepted: `您的申请（编号：${app.applicationNo}）已受理，我们将尽快为您审核。`,
       reviewing: `您的申请（编号：${app.applicationNo}）已进入审核阶段，请耐心等待结果。`,
       approved: `恭喜！您的申请（编号：${app.applicationNo}）已审核通过。${comment ? '审核意见：' + comment : ''}`,
       rejected: `很遗憾，您的申请（编号：${app.applicationNo}）被驳回。${comment ? '驳回原因：' + comment : ''}您可在申请详情页选择"重新提交"。`,

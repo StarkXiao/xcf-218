@@ -98,6 +98,21 @@
           </div>
 
           <div v-if="canReview" class="content-section">
+            <h3 class="section-title">办理阶段</h3>
+            <el-steps :active="currentStage" finish-status="success" align-center style="margin-bottom: 24px">
+              <el-step title="受理" :description="stageDescriptions.accept">
+                <template #icon><el-icon><Reading /></el-icon></template>
+              </el-step>
+              <el-step title="审核" :description="stageDescriptions.review">
+                <template #icon><el-icon><DocumentChecked /></el-icon></template>
+              </el-step>
+              <el-step title="办结" :description="stageDescriptions.complete">
+                <template #icon><el-icon><Finished /></el-icon></template>
+              </el-step>
+            </el-steps>
+          </div>
+
+          <div v-if="canReview" class="content-section">
             <h3 class="section-title">审核操作</h3>
             <el-alert
               v-if="currentApproverId"
@@ -117,7 +132,20 @@
                   :disabled="!isCurrentApprover"
                 />
               </el-form-item>
-              <el-form-item>
+
+              <el-form-item v-if="showAcceptAction" label="受理阶段">
+                <el-button
+                  type="primary"
+                  :loading="submitting"
+                  @click="doReview('accept')"
+                  :disabled="!isCurrentApprover"
+                >
+                  <el-icon><Reading /></el-icon> 受理申请
+                </el-button>
+                <span class="action-tip">确认材料齐全，正式受理申请</span>
+              </el-form-item>
+
+              <el-form-item v-if="showReviewActions" label="审核阶段">
                 <el-button
                   type="warning"
                   :loading="submitting"
@@ -135,9 +163,13 @@
                 <el-button type="warning" :loading="submitting" @click="openRejectDialog" :disabled="!isCurrentApprover">
                   <el-icon><Refresh /></el-icon> 退回材料
                 </el-button>
+              </el-form-item>
+
+              <el-form-item v-if="showCompleteAction" label="办结阶段">
                 <el-button type="primary" :loading="submitting" @click="doReview('complete')" :disabled="!isCurrentApprover">
                   <el-icon><Finished /></el-icon> 办理完成
                 </el-button>
+                <span class="action-tip">审核通过后，完成办理并出证</span>
               </el-form-item>
             </el-form>
           </div>
@@ -270,7 +302,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ArrowLeft, CircleCheck, CircleClose, Finished, Refresh, Document } from '@element-plus/icons-vue'
+import { ArrowLeft, CircleCheck, CircleClose, Finished, Refresh, Document, Reading, DocumentChecked } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 import { getApplicationById, downloadMaterial, previewMaterial } from '@/api/application'
 import { reviewApplication } from '@/api/admin'
@@ -325,7 +357,7 @@ const isCurrentApprover = computed(() => {
 })
 
 const canReview = computed(() => {
-  return application.value && ['submitted', 'reviewing', 'approved', 'supplementing'].includes(application.value.status)
+  return application.value && ['submitted', 'accepted', 'reviewing', 'approved', 'supplementing'].includes(application.value.status)
 })
 
 const reviewableFiles = computed(() => {
@@ -341,6 +373,7 @@ const sortedRecords = computed(() => {
 const getStatusType = (status: string) => {
   const map: Record<string, string> = {
     submitted: 'warning',
+    accepted: 'info',
     reviewing: 'primary',
     approved: 'success',
     rejected: 'danger',
@@ -353,6 +386,7 @@ const getStatusType = (status: string) => {
 const getStatusText = (status: string) => {
   const map: Record<string, string> = {
     submitted: '待审核',
+    accepted: '已受理',
     reviewing: '审核中',
     approved: '已通过',
     rejected: '已驳回',
@@ -361,6 +395,43 @@ const getStatusText = (status: string) => {
   }
   return map[status] || status
 }
+
+const currentStage = computed(() => {
+  if (!application.value) return 0
+  const status = application.value.status
+  if (status === 'submitted') return 0
+  if (status === 'accepted') return 1
+  if (['reviewing', 'supplementing'].includes(status)) return 1
+  if (['approved'].includes(status)) return 2
+  if (status === 'completed') return 3
+  if (status === 'rejected') return 1
+  return 0
+})
+
+const stageDescriptions = computed(() => {
+  if (!application.value) return { accept: '', review: '', complete: '' }
+  const status = application.value.status
+  return {
+    accept: status === 'submitted' ? '待受理' : (status === 'accepted' || status !== 'submitted' ? '已受理' : ''),
+    review: ['reviewing', 'supplementing'].includes(status) ? '审核中' : (['approved', 'completed'].includes(status) ? '已审核' : '待审核'),
+    complete: status === 'completed' ? '已办结' : '待办结',
+  }
+})
+
+const showAcceptAction = computed(() => {
+  if (!application.value) return false
+  return application.value.status === 'submitted'
+})
+
+const showReviewActions = computed(() => {
+  if (!application.value) return false
+  return ['submitted', 'accepted', 'reviewing', 'supplementing'].includes(application.value.status)
+})
+
+const showCompleteAction = computed(() => {
+  if (!application.value) return false
+  return ['approved'].includes(application.value.status)
+})
 
 const formatDate = (date: string) => dayjs(date).format('YYYY-MM-DD HH:mm:ss')
 
@@ -385,13 +456,14 @@ const loadData = async () => {
 }
 
 const actionText: Record<string, string> = {
+  accept: '受理申请',
   reviewing: '开始审核',
   approve: '审核通过',
   reject: '驳回申请',
   complete: '办理完成',
 }
 
-const doReview = async (action: 'approve' | 'reject' | 'reviewing' | 'complete') => {
+const doReview = async (action: 'accept' | 'approve' | 'reject' | 'reviewing' | 'complete') => {
   if (!userStore.user) return
 
   await ElMessageBox.confirm(
@@ -566,5 +638,10 @@ onMounted(loadData)
 .reject-material-list .el-checkbox {
   display: block;
   margin-bottom: 12px;
+}
+.action-tip {
+  margin-left: 12px;
+  font-size: 13px;
+  color: #909399;
 }
 </style>

@@ -257,6 +257,7 @@ export interface AdminTodoAggregation {
 export interface Statistics {
   totalApplications: number
   pendingCount: number
+  acceptedCount: number
   reviewingCount: number
   approvedCount: number
   rejectedCount: number
