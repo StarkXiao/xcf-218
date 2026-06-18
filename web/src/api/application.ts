@@ -44,8 +44,8 @@ export const applicationApi = {
       },
     }),
 
-  getApplications: (userId?: number, status?: string) =>
-    request.get<any, Application[]>('/applications', { params: { userId, status } }),
+  getApplications: (userId?: number, status?: string, category?: string, startDate?: string, endDate?: string) =>
+    request.get<any, Application[]>('/applications', { params: { userId, status, category, startDate, endDate } }),
 
   getApplication: (id: number) =>
     request.get<any, Application>(`/applications/${id}`),
@@ -106,8 +106,8 @@ export const createApplication = (formData: FormData) => {
   })
 }
 
-export const getApplications = (userId?: number, status?: string) => {
-  return request.get<any, Application[]>('/applications', { params: { userId, status } })
+export const getApplications = (userId?: number, status?: string, category?: string, startDate?: string, endDate?: string) => {
+  return request.get<any, Application[]>('/applications', { params: { userId, status, category, startDate, endDate } })
 }
 
 export const getApplicationById = (id: number) => {
@@ -135,6 +135,13 @@ export const requestWithdraw = (data: WithdrawRequest) => {
   return request.post<any, { success: boolean; withdrawalId: number; message: string }>(
     '/applications/withdraw',
     data,
+  )
+}
+
+export const batchWithdraw = (items: Array<{ applicationId: number; userId: number; reason: string }>) => {
+  return request.post<any, { results: Array<{ applicationId: number; success: boolean; message: string }> }>(
+    '/applications/withdraw/batch',
+    { items },
   )
 }
 

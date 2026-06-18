@@ -581,6 +581,19 @@ export class ApplicationService {
     return { canWithdraw: true, reason: '' };
   }
 
+  async batchWithdraw(items: Array<{ applicationId: number; userId: number; reason: string }>) {
+    const results = [];
+    for (const item of items) {
+      try {
+        const result = await this.requestWithdraw(item);
+        results.push({ applicationId: item.applicationId, success: true, message: result.message });
+      } catch (e: any) {
+        results.push({ applicationId: item.applicationId, success: false, message: e.message || '撤回失败' });
+      }
+    }
+    return { results };
+  }
+
   async canResubmit(applicationId: number, userId: number) {
     const app = await this.appRepository.findOne({ where: { id: applicationId } });
     if (!app) {
@@ -628,12 +641,27 @@ export class ApplicationService {
     return labels[status] || status;
   }
 
-  async findByUserId(userId: number) {
-    const apps = await this.appRepository.find({
-      where: { userId },
-      relations: ['serviceItem', 'materialFiles'],
-      order: { createdAt: 'DESC' },
-    });
+  async findByUserId(userId: number, status?: string, category?: string, startDate?: string, endDate?: string) {
+    const queryBuilder = this.appRepository.createQueryBuilder('app')
+      .leftJoinAndSelect('app.serviceItem', 'serviceItem')
+      .leftJoinAndSelect('app.materialFiles', 'materialFiles')
+      .where('app.userId = :userId', { userId })
+      .orderBy('app.createdAt', 'DESC');
+
+    if (status) {
+      queryBuilder.andWhere('app.status = :status', { status });
+    }
+    if (category) {
+      queryBuilder.andWhere('serviceItem.category = :category', { category });
+    }
+    if (startDate) {
+      queryBuilder.andWhere('app.createdAt >= :startDate', { startDate });
+    }
+    if (endDate) {
+      queryBuilder.andWhere('app.createdAt <= :endDate', { endDate });
+    }
+
+    const apps = await queryBuilder.getMany();
     return apps.map(a => this.transformApplication(a));
   }
 

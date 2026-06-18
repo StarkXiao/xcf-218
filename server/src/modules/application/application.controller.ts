@@ -39,6 +39,13 @@ export class ApplicationController {
     });
   }
 
+  @Post('withdraw/batch')
+  batchWithdraw(
+    @Body() body: { items: Array<{ applicationId: number; userId: number; reason: string }> },
+  ) {
+    return this.service.batchWithdraw(body.items);
+  }
+
   @Post('withdraw/review')
   reviewWithdraw(
     @Body() body: {
@@ -110,9 +117,15 @@ export class ApplicationController {
   }
 
   @Get()
-  findAll(@Query('userId') userId?: string, @Query('status') status?: string) {
+  findAll(
+    @Query('userId') userId?: string,
+    @Query('status') status?: string,
+    @Query('category') category?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
     if (userId) {
-      return this.service.findByUserId(+userId);
+      return this.service.findByUserId(+userId, status, category, startDate, endDate);
     }
     return this.service.findAll(status);
   }
