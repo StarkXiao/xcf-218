@@ -45,6 +45,10 @@
             <el-icon><HomeFilled /></el-icon>
             <span>首页</span>
           </el-menu-item>
+          <el-menu-item index="/high-frequency">
+            <el-icon><HotWater /></el-icon>
+            <span>高频事项</span>
+          </el-menu-item>
           <el-menu-item index="/services">
             <el-icon><Search /></el-icon>
             <span>事项查询</span>
@@ -120,6 +124,7 @@
             <el-menu-item index="/admin/material-templates">材料模板管理</el-menu-item>
             <el-menu-item index="/admin/evaluation-dashboard">评价统计看板</el-menu-item>
             <el-menu-item index="/admin/complaints">投诉处理与回访</el-menu-item>
+            <el-menu-item index="/admin/high-frequency">高频事项配置</el-menu-item>
           </el-sub-menu>
         </el-menu>
       </el-aside>
@@ -154,6 +159,7 @@ import {
   ArrowDown,
   EditPen,
   DocumentCopy,
+  HotWater,
 } from '@element-plus/icons-vue'
 
 const route = useRoute()
@@ -164,6 +170,7 @@ const unreadCount = ref(0)
 const reminderCount = ref(0)
 
 const activeMenu = computed(() => {
+  if (route.path.startsWith('/high-frequency')) return '/high-frequency'
   if (route.path.startsWith('/services')) return '/services'
   if (route.path.startsWith('/book')) return '/services'
   if (route.path.startsWith('/apply')) return '/services'
@@ -184,6 +191,7 @@ const activeMenu = computed(() => {
   if (route.path.startsWith('/admin/material-templates')) return '/admin/material-templates'
   if (route.path.startsWith('/admin/evaluation-dashboard')) return '/admin/evaluation-dashboard'
   if (route.path.startsWith('/admin/complaints')) return '/admin/complaints'
+  if (route.path.startsWith('/admin/high-frequency')) return '/admin/high-frequency'
   if (route.path.startsWith('/my-window-handlings')) return '/my-window-handlings'
   if (route.path.startsWith('/my-evaluations')) return '/my-evaluations'
   if (route.path.startsWith('/my-complaints')) return '/my-complaints'

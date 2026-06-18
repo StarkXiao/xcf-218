@@ -22,13 +22,56 @@ export interface ServiceItem {
   viewCount?: number
   favoriteCount?: number
   subscriptionCount?: number
+  applicationCount?: number
   publishStatus?: string
   publishedBy?: number
   changeLog?: string
   isFavorited?: boolean
   isSubscribed?: boolean
+  rank?: number
+  heatScore?: number
   createdAt?: string
   updatedAt?: string
+}
+
+export interface HotCategory {
+  id: number
+  name: string
+  code: string
+  icon?: string
+  sort: number
+  active: boolean
+  description?: string
+  hotItems?: HotItem[]
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface HotItem {
+  id: number
+  serviceItemId: number
+  serviceItem?: ServiceItem
+  categoryId?: number
+  category?: HotCategory
+  sort: number
+  active: boolean
+  isBanner: boolean
+  isQuickApply: boolean
+  bannerImage?: string
+  bannerTitle?: string
+  bannerSubtitle?: string
+  quickApplyTips?: string
+  clickCount?: number
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface HeatStatistics {
+  totalApplications: number
+  totalFavorites: number
+  totalSubscriptions: number
+  totalViews: number
+  heatScore: number
 }
 
 export interface Favorite {

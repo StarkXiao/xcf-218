@@ -48,6 +48,47 @@
     </el-row>
 
     <el-row :gutter="20" style="margin-top: 20px">
+      <el-col :span="24">
+        <el-card class="hot-section">
+          <template #header>
+            <div class="card-header">
+              <div class="header-title">
+                <el-icon color="#f56c6c"><HotWater /></el-icon>
+                <span>高频事项专区</span>
+              </div>
+              <el-button type="primary" link @click="$router.push('/high-frequency')">进入专区 →</el-button>
+            </div>
+          </template>
+          <div class="hot-banner" v-if="hotBanners.length > 0">
+            <el-carousel :interval="4000" arrow="hover" height="140px">
+              <el-carousel-item v-for="banner in hotBanners" :key="banner.id">
+                <div class="mini-banner" @click="$router.push(`/apply/${banner.serviceItemId}`)">
+                  <div class="mini-banner-content">
+                    <h4>{{ banner.bannerTitle || banner.serviceItem?.name }}</h4>
+                    <p>{{ banner.bannerSubtitle || banner.serviceItem?.description }}</p>
+                    <el-tag type="danger" size="small" effect="dark">热门</el-tag>
+                  </div>
+                  <el-icon :size="60" color="#fff" style="opacity: 0.3"><Document /></el-icon>
+                </div>
+              </el-carousel-item>
+            </el-carousel>
+          </div>
+          <div class="hot-quick">
+            <div
+              v-for="item in hotQuickItems.slice(0, 5)"
+              :key="item.id"
+              class="hot-quick-item"
+              @click="$router.push(`/apply/${item.serviceItemId}`)"
+            >
+              <el-icon :size="24" color="#409eff"><Lightning /></el-icon>
+              <span>{{ item.serviceItem?.name }}</span>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
+
+    <el-row :gutter="20" style="margin-top: 20px">
       <el-col :span="12">
         <el-card>
           <template #header>
@@ -126,9 +167,10 @@ import { getApplications } from '@/api/application'
 import { getUnreadCount } from '@/api/message'
 import { toggleFavorite } from '@/api/favorite'
 import { toggleSubscription } from '@/api/subscription'
+import { getBanners, getQuickApplyItems } from '@/api/high-frequency'
 import { ElMessage } from 'element-plus'
-import { Star, Bell, TrendCharts } from '@element-plus/icons-vue'
-import type { ServiceItem, Application } from '@/types'
+import { Star, Bell, TrendCharts, HotWater, Document, Lightning } from '@element-plus/icons-vue'
+import type { ServiceItem, Application, HotItem } from '@/types'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -137,14 +179,16 @@ const loading = ref(false)
 const recommendedItems = ref<ServiceItem[]>([])
 const recentApps = ref<Application[]>([])
 const unreadCount = ref(0)
+const hotBanners = ref<HotItem[]>([])
+const hotQuickItems = ref<HotItem[]>([])
 
 const quickLinks = [
+  { label: '高频事项', path: '/high-frequency', icon: 'HotWater', color: '#f56c6c' },
   { label: '事项查询', path: '/services', icon: 'Search', color: '#409eff' },
   { label: '我的收藏', path: '/my-favorites', icon: 'Star', color: '#f56c6c' },
   { label: '我的订阅', path: '/my-subscriptions', icon: 'Bell', color: '#e6a23c' },
   { label: '进度跟踪', path: '/my-applications', icon: 'List', color: '#67c23a' },
   { label: '消息中心', path: '/messages', icon: 'MessageBox', color: '#909399' },
-  { label: '管理后台', path: userStore.isAdmin ? '/admin' : '/home', icon: 'Setting', color: '#909399' },
 ]
 
 const myAppCount = computed(() => recentApps.value.length)
@@ -204,14 +248,18 @@ const loadData = async () => {
   if (!userStore.user) return
   loading.value = true
   try {
-    const [items, apps, count] = await Promise.all([
+    const [items, apps, count, banners, quickItems] = await Promise.all([
       getRecommendedItems(userStore.user.id, 5),
       getApplications(userStore.user.id),
       getUnreadCount(userStore.user.id),
+      getBanners(userStore.user.id),
+      getQuickApplyItems(userStore.user.id),
     ])
     recommendedItems.value = items
     recentApps.value = apps.slice(0, 5)
     unreadCount.value = count
+    hotBanners.value = banners
+    hotQuickItems.value = quickItems
   } finally {
     loading.value = false
   }
@@ -292,5 +340,70 @@ onMounted(loadData)
   gap: 4px;
   color: #f56c6c;
   font-size: 13px;
+}
+
+.hot-section {
+  border-radius: 12px;
+}
+
+.header-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.hot-banner {
+  margin-bottom: 20px;
+}
+
+.mini-banner {
+  height: 140px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 40px;
+  color: #fff;
+  cursor: pointer;
+}
+
+.mini-banner-content h4 {
+  font-size: 20px;
+  margin: 0 0 8px 0;
+}
+
+.mini-banner-content p {
+  font-size: 13px;
+  opacity: 0.9;
+  margin: 0 0 12px 0;
+}
+
+.hot-quick {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.hot-quick-item {
+  flex: 1;
+  min-width: 140px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 20px;
+  background: #f5f7fa;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 14px;
+  font-weight: 500;
+  color: #303133;
+}
+
+.hot-quick-item:hover {
+  background: #ecf5ff;
+  transform: translateY(-2px);
 }
 </style>

@@ -112,6 +112,8 @@ export class ApplicationService {
         applicationId: savedApp.id,
       });
 
+      await queryRunner.manager.increment(ServiceItem, { id: data.serviceItemId }, 'applicationCount', 1);
+
       await queryRunner.commitTransaction();
       return this.findOne(savedApp.id);
     } catch (error) {

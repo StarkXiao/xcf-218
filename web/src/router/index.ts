@@ -19,6 +19,12 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '首页' },
       },
       {
+        path: 'high-frequency',
+        name: 'HighFrequency',
+        component: () => import('@/views/HighFrequency.vue'),
+        meta: { title: '高频事项专区' },
+      },
+      {
         path: 'services',
         name: 'Services',
         component: () => import('@/views/ServiceList.vue'),
@@ -239,6 +245,12 @@ const routes: RouteRecordRaw[] = [
         name: 'AdminComplaints',
         component: () => import('@/views/AdminComplaints.vue'),
         meta: { title: '投诉处理与回访', admin: true },
+      },
+      {
+        path: 'admin/high-frequency',
+        name: 'AdminHighFrequency',
+        component: () => import('@/views/AdminHighFrequency.vue'),
+        meta: { title: '高频事项配置', admin: true },
       },
       {
         path: 'approvals/pending',

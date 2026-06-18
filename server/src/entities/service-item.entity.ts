@@ -41,6 +41,9 @@ export class ServiceItem {
   @Column({ default: 0 })
   subscriptionCount: number;
 
+  @Column({ default: 0 })
+  applicationCount: number;
+
   @Column({ nullable: true })
   publishedBy: number;
 

@@ -5,6 +5,8 @@ import { User } from './entities/user.entity';
 import { ServiceItem } from './entities/service-item.entity';
 import { ApprovalFlow } from './entities/approval-flow.entity';
 import { ApprovalNode } from './entities/approval-node.entity';
+import { HotCategory } from './entities/hot-category.entity';
+import { HotItem } from './entities/hot-item.entity';
 
 @Injectable()
 export class SeedService {
@@ -13,12 +15,15 @@ export class SeedService {
     @InjectRepository(ServiceItem) private readonly serviceItemRepository: Repository<ServiceItem>,
     @InjectRepository(ApprovalFlow) private readonly flowRepository: Repository<ApprovalFlow>,
     @InjectRepository(ApprovalNode) private readonly nodeRepository: Repository<ApprovalNode>,
+    @InjectRepository(HotCategory) private readonly hotCategoryRepository: Repository<HotCategory>,
+    @InjectRepository(HotItem) private readonly hotItemRepository: Repository<HotItem>,
   ) {}
 
   async seed() {
     await this.seedUsers();
     await this.seedServiceItems();
     await this.seedApprovalFlows();
+    await this.seedHighFrequency();
   }
 
   private async seedUsers() {
@@ -298,6 +303,102 @@ export class SeedService {
 
       await this.nodeRepository.save(nodes);
       console.log('已创建简易审批流程（SIMPLE_APPROVAL）');
+    }
+  }
+
+  private async seedHighFrequency() {
+    const categoryCount = await this.hotCategoryRepository.count();
+    if (categoryCount === 0) {
+      const categories = [
+        { name: '户政服务', code: 'HUZHENG', icon: 'User', sort: 1, description: '身份证、户口簿等户籍相关业务' },
+        { name: '社会保障', code: 'SHEBAO', icon: 'Wallet', sort: 2, description: '社保、医保、公积金等社会保障业务' },
+        { name: '市场监管', code: 'SHICHANG', icon: 'OfficeBuilding', sort: 3, description: '营业执照、市场主体登记等业务' },
+        { name: '不动产登记', code: 'BUDONGCHAN', icon: 'HomeFilled', sort: 4, description: '房产证、不动产登记等业务' },
+        { name: '出入境管理', code: 'CHURUJING', icon: 'Tickets', sort: 5, description: '护照、通行证等出入境业务' },
+      ];
+      const savedCategories = await this.hotCategoryRepository.save(categories);
+      console.log(`已创建 ${savedCategories.length} 个高频分类`);
+
+      const serviceItems = await this.serviceItemRepository.find({ where: { publishStatus: 'published' } });
+      const itemMap = new Map(serviceItems.map(item => [item.code, item]));
+
+      const hotItems: any[] = [];
+      let sort = 1;
+
+      if (itemMap.has('ID-001')) {
+        hotItems.push({
+          serviceItemId: itemMap.get('ID-001')!.id,
+          categoryId: savedCategories[0].id,
+          sort: sort++,
+          isBanner: true,
+          isQuickApply: true,
+          bannerTitle: '居民身份证办理',
+          bannerSubtitle: '足不出户，在线办理身份证',
+          quickApplyTips: '请准备好户口簿和近期免冠照片',
+          active: true,
+        });
+      }
+
+      if (itemMap.has('SOC-001')) {
+        hotItems.push({
+          serviceItemId: itemMap.get('SOC-001')!.id,
+          categoryId: savedCategories[1].id,
+          sort: sort++,
+          isBanner: true,
+          isQuickApply: true,
+          bannerTitle: '社保卡申领',
+          bannerSubtitle: '一键申领，立等可取',
+          quickApplyTips: '请准备好有效身份证件',
+          active: true,
+        });
+      }
+
+      if (itemMap.has('BUS-001')) {
+        hotItems.push({
+          serviceItemId: itemMap.get('BUS-001')!.id,
+          categoryId: savedCategories[2].id,
+          sort: sort++,
+          isQuickApply: true,
+          quickApplyTips: '请准备好经营场所证明和身份证明',
+          active: true,
+        });
+      }
+
+      if (itemMap.has('PROP-001')) {
+        hotItems.push({
+          serviceItemId: itemMap.get('PROP-001')!.id,
+          categoryId: savedCategories[3].id,
+          sort: sort++,
+          isQuickApply: true,
+          quickApplyTips: '请准备好房屋所有权证书和身份证明',
+          active: true,
+        });
+      }
+
+      if (itemMap.has('PAS-001')) {
+        hotItems.push({
+          serviceItemId: itemMap.get('PAS-001')!.id,
+          categoryId: savedCategories[4].id,
+          sort: sort++,
+          isQuickApply: true,
+          quickApplyTips: '请准备好身份证和近期免冠照片',
+          active: true,
+        });
+      }
+
+      if (itemMap.has('HF-001')) {
+        hotItems.push({
+          serviceItemId: itemMap.get('HF-001')!.id,
+          categoryId: savedCategories[1].id,
+          sort: sort++,
+          active: true,
+        });
+      }
+
+      if (hotItems.length > 0) {
+        await this.hotItemRepository.save(hotItems);
+        console.log(`已创建 ${hotItems.length} 个高频事项`);
+      }
     }
   }
 }
