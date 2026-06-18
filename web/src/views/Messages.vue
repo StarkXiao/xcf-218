@@ -46,7 +46,15 @@
               标为已读
             </el-button>
             <el-button
-              v-if="row.type === 'supplement'"
+              v-if="row.type === 'supplement' && userStore.isAdmin && row.applicationId"
+              type="warning"
+              link
+              @click.stop="goToReview(row.applicationId)"
+            >
+              前往审核
+            </el-button>
+            <el-button
+              v-if="row.type === 'supplement' && !userStore.isAdmin"
               type="warning"
               link
               @click.stop="goToSupplement"
@@ -131,7 +139,11 @@ const handleRowClick = async (row: Message) => {
     await markOneRead(row.id)
   }
   if (row.type === 'supplement') {
-    goToSupplement()
+    if (userStore.isAdmin && row.applicationId) {
+      goToReview(row.applicationId)
+    } else {
+      goToSupplement()
+    }
   } else if (row.appointmentId) {
     goToAppointment(row.appointmentId)
   } else if (row.applicationId) {
@@ -162,6 +174,10 @@ const goToAppointment = (id: number) => {
 
 const goToSupplement = () => {
   router.push('/supplement-center')
+}
+
+const goToReview = (applicationId: number) => {
+  router.push(`/admin/review/${applicationId}`)
 }
 
 onMounted(loadMessages)
