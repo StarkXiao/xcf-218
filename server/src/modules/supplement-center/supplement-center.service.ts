@@ -47,8 +47,8 @@ export class SupplementCenterService {
         throw new NotFoundException('申请不存在');
       }
 
-      if (!['submitted', 'reviewing'].includes(app.status)) {
-        throw new BadRequestException('当前申请状态不支持退回材料');
+      if (!['reviewing'].includes(app.status)) {
+        throw new BadRequestException('当前申请状态不支持退回材料，请先进入审核阶段');
       }
 
       if (!data.rejectedMaterials || data.rejectedMaterials.length === 0) {

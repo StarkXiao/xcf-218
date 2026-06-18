@@ -145,15 +145,19 @@
                 <span class="action-tip">确认材料齐全，正式受理申请</span>
               </el-form-item>
 
-              <el-form-item v-if="showReviewActions" label="审核阶段">
+              <el-form-item v-if="showReviewStartAction" label="审核阶段">
                 <el-button
                   type="warning"
                   :loading="submitting"
                   @click="doReview('reviewing')"
-                  :disabled="application.status === 'reviewing' || !isCurrentApprover"
+                  :disabled="!isCurrentApprover"
                 >
                   开始审核
                 </el-button>
+                <span class="action-tip">进入实质性审核阶段</span>
+              </el-form-item>
+
+              <el-form-item v-if="showReviewResultActions" label="审核结果">
                 <el-button type="success" :loading="submitting" @click="doReview('approve')" :disabled="!isCurrentApprover">
                   <el-icon><CircleCheck /></el-icon> 审核通过
                 </el-button>
@@ -402,7 +406,7 @@ const currentStage = computed(() => {
   if (status === 'submitted') return 0
   if (status === 'accepted') return 1
   if (['reviewing', 'supplementing'].includes(status)) return 1
-  if (['approved'].includes(status)) return 2
+  if (status === 'approved') return 2
   if (status === 'completed') return 3
   if (status === 'rejected') return 1
   return 0
@@ -412,8 +416,8 @@ const stageDescriptions = computed(() => {
   if (!application.value) return { accept: '', review: '', complete: '' }
   const status = application.value.status
   return {
-    accept: status === 'submitted' ? '待受理' : (status === 'accepted' || status !== 'submitted' ? '已受理' : ''),
-    review: ['reviewing', 'supplementing'].includes(status) ? '审核中' : (['approved', 'completed'].includes(status) ? '已审核' : '待审核'),
+    accept: status === 'submitted' ? '待受理' : '已受理',
+    review: status === 'accepted' ? '待审核' : (['reviewing', 'supplementing'].includes(status) ? '审核中' : (['approved', 'completed'].includes(status) ? '已审核' : '待审核')),
     complete: status === 'completed' ? '已办结' : '待办结',
   }
 })
@@ -423,14 +427,19 @@ const showAcceptAction = computed(() => {
   return application.value.status === 'submitted'
 })
 
-const showReviewActions = computed(() => {
+const showReviewStartAction = computed(() => {
   if (!application.value) return false
-  return ['submitted', 'accepted', 'reviewing', 'supplementing'].includes(application.value.status)
+  return ['accepted', 'supplementing'].includes(application.value.status)
+})
+
+const showReviewResultActions = computed(() => {
+  if (!application.value) return false
+  return application.value.status === 'reviewing'
 })
 
 const showCompleteAction = computed(() => {
   if (!application.value) return false
-  return ['approved'].includes(application.value.status)
+  return application.value.status === 'approved'
 })
 
 const formatDate = (date: string) => dayjs(date).format('YYYY-MM-DD HH:mm:ss')

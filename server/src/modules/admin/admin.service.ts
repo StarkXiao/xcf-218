@@ -1,4 +1,4 @@
-import { Injectable, ForbiddenException } from '@nestjs/common';
+import { Injectable, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Application } from '../../entities/application.entity';
@@ -80,6 +80,22 @@ export class AdminService {
       }
     }
 
+    const allowedActionsByStatus: Record<string, string[]> = {
+      submitted: ['accept'],
+      accepted: ['reviewing'],
+      reviewing: ['approve', 'reject'],
+      approved: ['complete'],
+      supplementing: ['reviewing'],
+    };
+
+    const allowedActions = allowedActionsByStatus[app.status] || [];
+    if (!allowedActions.includes(action)) {
+      const statusLabel = this.getStatusLabel(app.status);
+      throw new BadRequestException(
+        `当前状态为「${statusLabel}」，不允许执行此操作。`,
+      );
+    }
+
     const statusMap: Record<string, string> = {
       accept: 'accepted',
       approve: 'approved',
@@ -105,87 +121,6 @@ export class AdminService {
     };
 
     const newStatus = statusMap[action];
-
-    if (action === 'reviewing') {
-      const hasAcceptRecord = await this.progressRepository.findOne({
-        where: { applicationId: id, step: '受理申请' },
-      });
-      if (!hasAcceptRecord) {
-        await this.progressRepository.save({
-          applicationId: id,
-          step: '受理申请',
-          status: 'completed',
-          remark: '系统自动受理',
-          operatorId: reviewerId,
-        });
-      }
-    }
-
-    if (action === 'approve' || action === 'reject') {
-      const hasReviewingRecord = await this.progressRepository.findOne({
-        where: { applicationId: id, step: '材料审核' },
-      });
-      if (!hasReviewingRecord) {
-        const hasAcceptRecord = await this.progressRepository.findOne({
-          where: { applicationId: id, step: '受理申请' },
-        });
-        if (!hasAcceptRecord) {
-          await this.progressRepository.save({
-            applicationId: id,
-            step: '受理申请',
-            status: 'completed',
-            remark: '系统自动受理',
-            operatorId: reviewerId,
-          });
-        }
-        await this.progressRepository.save({
-          applicationId: id,
-          step: '材料审核',
-          status: 'completed',
-          remark: '审核完成',
-          operatorId: reviewerId,
-        });
-      }
-    }
-
-    if (action === 'complete') {
-      const hasApproveRecord = await this.progressRepository.findOne({
-        where: { applicationId: id, step: '审核通过' },
-      });
-      if (!hasApproveRecord) {
-        const hasReviewingRecord = await this.progressRepository.findOne({
-          where: { applicationId: id, step: '材料审核' },
-        });
-        if (!hasReviewingRecord) {
-          const hasAcceptRecord = await this.progressRepository.findOne({
-            where: { applicationId: id, step: '受理申请' },
-          });
-          if (!hasAcceptRecord) {
-            await this.progressRepository.save({
-              applicationId: id,
-              step: '受理申请',
-              status: 'completed',
-              remark: '系统自动受理',
-              operatorId: reviewerId,
-            });
-          }
-          await this.progressRepository.save({
-            applicationId: id,
-            step: '材料审核',
-            status: 'completed',
-            remark: '审核完成',
-            operatorId: reviewerId,
-          });
-        }
-        await this.progressRepository.save({
-          applicationId: id,
-          step: '审核通过',
-          status: 'completed',
-          remark: '审核通过',
-          operatorId: reviewerId,
-        });
-      }
-    }
 
     app.status = newStatus;
     app.reviewComment = comment;
@@ -233,5 +168,18 @@ export class AdminService {
     }
 
     return app;
+  }
+
+  private getStatusLabel(status: string): string {
+    const labels: Record<string, string> = {
+      submitted: '待审核',
+      accepted: '已受理',
+      reviewing: '审核中',
+      approved: '审核通过',
+      rejected: '已驳回',
+      completed: '办理完成',
+      supplementing: '材料补充中',
+    };
+    return labels[status] || status;
   }
 }
