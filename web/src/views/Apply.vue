@@ -113,7 +113,6 @@
                 :on-change="(file: any) => handleFileChange(field.key, file)"
                 :on-remove="() => handleFileRemove(field.key)"
                 :accept="getFieldAccept(field)"
-                :before-upload="(file: any) => beforeFileUpload(field, file)"
               >
                 <el-button type="primary" :icon="Upload">选择文件</el-button>
                 <template #tip>
@@ -287,6 +286,13 @@ const formatFileSize = (bytes: number) => {
 }
 
 const handleFileChange = (key: string, file: UploadFile) => {
+  if (file.raw) {
+    const field = templateFields.value.find(f => f.key === key)
+    if (field && !validateFileUpload(field, file.raw)) {
+      uploadedFiles.value[key] = []
+      return
+    }
+  }
   uploadedFiles.value[key] = [file]
 }
 
@@ -294,7 +300,7 @@ const handleFileRemove = (key: string) => {
   uploadedFiles.value[key] = []
 }
 
-const beforeFileUpload = (field: TemplateFieldDef, file: File) => {
+const validateFileUpload = (field: TemplateFieldDef, file: File): boolean => {
   const maxSize = (field.maxFileSize || 10) * 1024 * 1024
   if (file.size > maxSize) {
     ElMessage.error(`${field.label}文件大小不能超过 ${field.maxFileSize || 10}MB`)
@@ -331,6 +337,14 @@ const handleLegacyFileRemove = (index: number) => {
   legacyUploadedFiles.value[index] = []
 }
 
+const parseFieldsSafe = (fields: any): TemplateFieldDef[] => {
+  if (Array.isArray(fields)) return fields
+  if (typeof fields === 'string') {
+    try { const p = JSON.parse(fields); return Array.isArray(p) ? p : [] } catch { return [] }
+  }
+  return []
+}
+
 const loadItem = async () => {
   loading.value = true
   try {
@@ -341,10 +355,11 @@ const loadItem = async () => {
     item.value = await getServiceItemById(serviceItemId)
 
     const template = await getCurrentTemplate(serviceItemId)
-    if (template && template.fields?.length > 0) {
+    const tplFields = parseFieldsSafe(template?.fields)
+    if (template && tplFields.length > 0) {
       currentTemplate.value = template
-      templateFields.value = template.fields
-      for (const field of template.fields) {
+      templateFields.value = tplFields
+      for (const field of tplFields) {
         const propKey = `tpl_${field.key}`
         if (field.type === 'file') {
           uploadedFiles.value[field.key] = []

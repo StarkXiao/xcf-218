@@ -418,9 +418,26 @@ const handleEdit = (row: MaterialTemplate) => {
   formData.serviceItemId = row.serviceItemId
   formData.description = row.description || ''
   formData.changeLog = ''
-  formData.fields = (row.fields || []).map(f => ({
-    ...f,
+  let fieldsArr: TemplateFieldDef[] = []
+  if (Array.isArray(row.fields)) {
+    fieldsArr = row.fields
+  } else if (typeof row.fields === 'string') {
+    try { fieldsArr = JSON.parse(row.fields) } catch { fieldsArr = [] }
+  }
+  formData.fields = fieldsArr.map(f => ({
+    key: f.key || '',
+    label: f.label || '',
+    type: f.type || 'text',
+    required: !!f.required,
+    placeholder: f.placeholder || '',
+    maxLength: f.maxLength,
+    pattern: f.pattern || '',
+    patternMessage: f.patternMessage || '',
+    options: f.options || [],
     optionsText: f.options?.join('\n') || '',
+    allowedFileTypes: f.allowedFileTypes || ['.jpg', '.jpeg', '.png', '.pdf'],
+    maxFileSize: f.maxFileSize || 10,
+    defaultValue: f.defaultValue || '',
   }))
   dialogVisible.value = true
 }
@@ -467,6 +484,7 @@ const handleSubmit = async () => {
   }
 
   const fields = buildFieldsPayload()
+  const fieldsStr = JSON.stringify(fields)
   submitting.value = true
   try {
     if (isEdit.value) {
@@ -474,7 +492,7 @@ const handleSubmit = async () => {
         name: formData.name,
         description: formData.description,
         changeLog: formData.changeLog,
-        fields: fields as any,
+        fields: fieldsStr as any,
       })
       ElMessage.success('更新成功')
     } else {
@@ -483,7 +501,7 @@ const handleSubmit = async () => {
         serviceItemId: formData.serviceItemId!,
         description: formData.description,
         changeLog: formData.changeLog,
-        fields: fields as any,
+        fields: fieldsStr as any,
         createdBy: userStore.user?.id,
       } as any)
       ElMessage.success('创建成功')

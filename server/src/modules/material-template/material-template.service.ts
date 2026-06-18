@@ -9,14 +9,28 @@ export class MaterialTemplateService {
     @InjectRepository(MaterialTemplate) private readonly repository: Repository<MaterialTemplate>,
   ) {}
 
-  async create(data: Partial<MaterialTemplate>) {
-    if (data.fields) {
+  private normalizeFields(fields: any): string {
+    if (!fields) return '[]';
+    if (typeof fields === 'string') {
       try {
-        JSON.parse(data.fields);
-      } catch {
+        const parsed = JSON.parse(fields);
+        if (!Array.isArray(parsed)) {
+          throw new BadRequestException('字段定义必须为数组格式');
+        }
+        return JSON.stringify(parsed);
+      } catch (e) {
+        if (e instanceof BadRequestException) throw e;
         throw new BadRequestException('字段定义格式不正确，必须为有效JSON');
       }
     }
+    if (Array.isArray(fields)) {
+      return JSON.stringify(fields);
+    }
+    throw new BadRequestException('字段定义必须为数组格式');
+  }
+
+  async create(data: Partial<MaterialTemplate>) {
+    const fieldsStr = this.normalizeFields(data.fields);
 
     const serviceItemId = data.serviceItemId;
     const currentVersion = await this.getLatestVersion(serviceItemId);
@@ -28,7 +42,12 @@ export class MaterialTemplateService {
     );
 
     const template = this.repository.create({
-      ...data,
+      name: data.name,
+      description: data.description,
+      serviceItemId: data.serviceItemId,
+      fields: fieldsStr,
+      changeLog: data.changeLog,
+      createdBy: data.createdBy,
       version: newVersion,
       isActive: true,
       isCurrent: true,
@@ -72,15 +91,17 @@ export class MaterialTemplateService {
     const template = await this.repository.findOne({ where: { id } });
     if (!template) throw new NotFoundException('模板不存在');
 
-    if (data.fields) {
-      try {
-        JSON.parse(data.fields);
-      } catch {
-        throw new BadRequestException('字段定义格式不正确，必须为有效JSON');
-      }
+    const updateData: Partial<MaterialTemplate> = {
+      name: data.name,
+      description: data.description,
+      changeLog: data.changeLog,
+    };
+
+    if (data.fields !== undefined) {
+      updateData.fields = this.normalizeFields(data.fields);
     }
 
-    await this.repository.update(id, data);
+    await this.repository.update(id, updateData);
     return this.findOne(id);
   }
 
@@ -142,8 +163,11 @@ export class MaterialTemplateService {
   }
 
   private transformTemplate(template: MaterialTemplate) {
+    if (!template.fields) return { ...template, fields: [] };
+    if (Array.isArray(template.fields)) return { ...template, fields: template.fields };
     try {
-      return { ...template, fields: JSON.parse(template.fields) };
+      const parsed = JSON.parse(template.fields);
+      return { ...template, fields: Array.isArray(parsed) ? parsed : [] };
     } catch {
       return { ...template, fields: [] };
     }
