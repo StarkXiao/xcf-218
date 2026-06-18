@@ -26,6 +26,9 @@ export class Message {
   @Column({ nullable: true })
   appointmentId: number;
 
+  @Column({ nullable: true })
+  serviceItemId: number;
+
   @CreateDateColumn()
   createdAt: Date;
 }

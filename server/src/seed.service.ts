@@ -131,7 +131,13 @@ export class SeedService {
         },
       ];
 
-      for (const item of items) {
+      for (let i = 0; i < items.length; i++) {
+        const item: any = items[i];
+        item.publishStatus = 'published';
+        item.recommended = i < 3;
+        item.viewCount = Math.floor(Math.random() * 1000) + 100;
+        item.favoriteCount = Math.floor(Math.random() * 200) + 10;
+        item.publishedBy = 1;
         await this.serviceItemRepository.save(item);
       }
       console.log(`已创建 ${items.length} 个办事事项`);

@@ -29,6 +29,27 @@ export class ServiceItem {
   @Column({ default: true })
   active: boolean;
 
+  @Column({ default: false })
+  recommended: boolean;
+
+  @Column({ default: 0 })
+  viewCount: number;
+
+  @Column({ default: 0 })
+  favoriteCount: number;
+
+  @Column({ default: 0 })
+  subscriptionCount: number;
+
+  @Column({ nullable: true })
+  publishedBy: number;
+
+  @Column({ default: 'draft' })
+  publishStatus: string;
+
+  @Column({ type: 'text', nullable: true })
+  changeLog: string;
+
   @CreateDateColumn()
   createdAt: Date;
 

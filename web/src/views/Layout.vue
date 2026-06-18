@@ -70,14 +70,30 @@
             <el-menu-item index="/my-proxy-applications">我的申请</el-menu-item>
             <el-menu-item index="/proxy-relations">代办关系</el-menu-item>
           </el-sub-menu>
+          <el-sub-menu index="personal">
+            <template #title>
+              <el-icon><User /></el-icon>
+              <span>个人中心</span>
+            </template>
+            <el-menu-item index="/my-favorites">我的收藏</el-menu-item>
+            <el-menu-item index="/my-subscriptions">我的订阅</el-menu-item>
+          </el-sub-menu>
           <el-menu-item index="/messages">
             <el-icon><Bell /></el-icon>
             <span>消息中心</span>
           </el-menu-item>
-          <el-menu-item v-if="userStore.isAdmin" index="/admin">
-            <el-icon><Setting /></el-icon>
-            <span>管理后台</span>
-          </el-menu-item>
+          <el-sub-menu v-if="userStore.isAdmin" index="admin-menu">
+            <template #title>
+              <el-icon><Setting /></el-icon>
+              <span>管理后台</span>
+            </template>
+            <el-menu-item index="/admin">管理首页</el-menu-item>
+            <el-menu-item index="/admin/service-items">事项管理</el-menu-item>
+            <el-menu-item index="/admin/schedule">排班管理</el-menu-item>
+            <el-menu-item index="/admin/appointments">预约办理</el-menu-item>
+            <el-menu-item index="/admin/supplement">补件管理</el-menu-item>
+            <el-menu-item index="/admin/proxy">代办人审核</el-menu-item>
+          </el-sub-menu>
         </el-menu>
       </el-aside>
       <el-main class="layout-main">
@@ -97,6 +113,18 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessageBox } from 'element-plus'
 import { useUserStore } from '@/stores/user'
 import { getUnreadCount } from '@/api/message'
+import {
+  HomeFilled,
+  Search,
+  Calendar,
+  List,
+  Refresh,
+  UserFilled,
+  Bell,
+  Setting,
+  User,
+  ArrowDown,
+} from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -109,10 +137,14 @@ const activeMenu = computed(() => {
   if (route.path.startsWith('/book')) return '/services'
   if (route.path.startsWith('/apply')) return '/services'
   if (route.path.startsWith('/applications')) return '/my-applications'
-  if (route.path.startsWith('/admin/schedule')) return '/admin'
-  if (route.path.startsWith('/admin/appointments')) return '/admin'
-  if (route.path.startsWith('/admin/supplement')) return '/admin'
-  if (route.path.startsWith('/admin/proxy')) return '/admin'
+  if (route.path.startsWith('/my-favorites')) return '/my-favorites'
+  if (route.path.startsWith('/my-subscriptions')) return '/my-subscriptions'
+  if (route.path.startsWith('/admin/service-items')) return '/admin/service-items'
+  if (route.path.startsWith('/admin/schedule')) return '/admin/schedule'
+  if (route.path.startsWith('/admin/appointments')) return '/admin/appointments'
+  if (route.path.startsWith('/admin/supplement')) return '/admin/supplement'
+  if (route.path.startsWith('/admin/proxy')) return '/admin/proxy'
+  if (route.path.startsWith('/admin/review')) return '/admin'
   if (route.path.startsWith('/admin')) return '/admin'
   if (route.path.startsWith('/supplement-center')) return '/supplement-center'
   if (route.path.startsWith('/proxy-apply')) return '/proxy-apply'

@@ -97,6 +97,24 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '代办关系管理' },
       },
       {
+        path: 'my-favorites',
+        name: 'MyFavorites',
+        component: () => import('@/views/MyFavorites.vue'),
+        meta: { title: '我的收藏' },
+      },
+      {
+        path: 'my-subscriptions',
+        name: 'MySubscriptions',
+        component: () => import('@/views/MySubscriptions.vue'),
+        meta: { title: '我的订阅' },
+      },
+      {
+        path: 'admin/service-items',
+        name: 'AdminServiceItems',
+        component: () => import('@/views/AdminServiceItems.vue'),
+        meta: { title: '事项管理', admin: true },
+      },
+      {
         path: 'admin',
         name: 'Admin',
         component: () => import('@/views/AdminDashboard.vue'),

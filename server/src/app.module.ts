@@ -12,6 +12,8 @@ import { SupplementRecord } from './entities/supplement-record.entity';
 import { ProxyApplication } from './entities/proxy-application.entity';
 import { ProxyProgressRecord } from './entities/proxy-progress-record.entity';
 import { ProxyRelation } from './entities/proxy-relation.entity';
+import { Favorite } from './entities/favorite.entity';
+import { Subscription } from './entities/subscription.entity';
 import { UserModule } from './modules/user/user.module';
 import { ServiceItemModule } from './modules/service-item/service-item.module';
 import { ApplicationModule } from './modules/application/application.module';
@@ -23,6 +25,8 @@ import { ScheduleModule } from './modules/schedule/schedule.module';
 import { AppointmentModule } from './modules/appointment/appointment.module';
 import { SupplementCenterModule } from './modules/supplement-center/supplement-center.module';
 import { ProxyModule } from './modules/proxy/proxy.module';
+import { FavoriteModule } from './modules/favorite/favorite.module';
+import { SubscriptionModule } from './modules/subscription/subscription.module';
 import { SeedService } from './seed.service';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -36,13 +40,13 @@ import * as path from 'path';
       username: 'root',
       password: 'root123456',
       database: 'government_service',
-      entities: [User, ServiceItem, Application, ProgressRecord, Message, MaterialFile, Schedule, Appointment, SupplementRecord, ProxyApplication, ProxyProgressRecord, ProxyRelation],
+      entities: [User, ServiceItem, Application, ProgressRecord, Message, MaterialFile, Schedule, Appointment, SupplementRecord, ProxyApplication, ProxyProgressRecord, ProxyRelation, Favorite, Subscription],
       synchronize: true,
       logging: false,
       charset: 'utf8mb4',
       timezone: '+08:00',
     }),
-    TypeOrmModule.forFeature([User, ServiceItem, Application, ProgressRecord, Message, MaterialFile, Schedule, Appointment, SupplementRecord, ProxyApplication, ProxyProgressRecord, ProxyRelation]),
+    TypeOrmModule.forFeature([User, ServiceItem, Application, ProgressRecord, Message, MaterialFile, Schedule, Appointment, SupplementRecord, ProxyApplication, ProxyProgressRecord, ProxyRelation, Favorite, Subscription]),
     UserModule,
     ServiceItemModule,
     ApplicationModule,
@@ -54,6 +58,8 @@ import * as path from 'path';
     AppointmentModule,
     SupplementCenterModule,
     ProxyModule,
+    FavoriteModule,
+    SubscriptionModule,
   ],
   providers: [SeedService],
 })

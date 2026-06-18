@@ -18,6 +18,37 @@ export interface ServiceItem {
   materials: string
   processingDays: number
   active: boolean
+  recommended?: boolean
+  viewCount?: number
+  favoriteCount?: number
+  subscriptionCount?: number
+  publishStatus?: string
+  publishedBy?: number
+  changeLog?: string
+  isFavorited?: boolean
+  isSubscribed?: boolean
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface Favorite {
+  id: number
+  userId: number
+  serviceItemId: number
+  serviceItem?: ServiceItem
+  active: boolean
+  createdAt: string
+}
+
+export interface Subscription {
+  id: number
+  userId: number
+  serviceItemId: number
+  serviceItem?: ServiceItem
+  notifyOnUpdate: boolean
+  notifyOnStatusChange: boolean
+  active: boolean
+  createdAt: string
 }
 
 export interface MaterialFile {
@@ -91,6 +122,7 @@ export interface Message {
   type: string
   applicationId?: number
   appointmentId?: number
+  serviceItemId?: number
   createdAt: string
 }
 

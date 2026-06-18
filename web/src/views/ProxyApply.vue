@@ -139,7 +139,7 @@
         <div class="risk-assessment-section">
           <div class="risk-header">
             <span class="risk-title">
-              <el-icon><Shield /></el-icon>
+              <el-icon><Lock /></el-icon>
               风险评估
             </span>
             <el-tag :type="riskLevelTagType" size="large" effect="dark">
@@ -187,7 +187,7 @@
 
           <div class="risk-acceptance">
             <div class="acceptance-title">
-              <el-icon><CheckList /></el-icon>
+              <el-icon><List /></el-icon>
               可用性验收标准
             </div>
             <el-row :gutter="12">
@@ -264,7 +264,7 @@
 import { ref, reactive, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules, type UploadFile } from 'element-plus'
-import { ArrowLeft, Upload, Warning, WarningFilled, Shield, CircleCheck, CircleClose, CheckList } from '@element-plus/icons-vue'
+import { ArrowLeft, Upload, Warning, WarningFilled, Lock, CircleCheck, CircleClose, List } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 import { createProxyApplication } from '@/api/proxy'
 

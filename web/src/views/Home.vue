@@ -52,19 +52,40 @@
         <el-card>
           <template #header>
             <div class="card-header">
-              <span>热门事项</span>
+              <span>为你推荐</span>
               <el-button type="primary" link @click="$router.push('/services')">查看全部 →</el-button>
             </div>
           </template>
-          <el-table :data="hotItems" style="width: 100%" v-loading="loading">
+          <el-table :data="recommendedItems" style="width: 100%" v-loading="loading">
             <el-table-column prop="name" label="事项名称" />
             <el-table-column prop="category" label="分类" width="120" />
             <el-table-column prop="processingDays" label="办理时限" width="100">
               <template #default="{ row }">{{ row.processingDays }} 个工作日</template>
             </el-table-column>
-            <el-table-column label="操作" width="100">
+            <el-table-column label="热度" width="80">
+              <template #default="{ row }">
+                <span class="hot-count"><el-icon><TrendCharts /></el-icon> {{ row.favoriteCount || 0 }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="240">
               <template #default="{ row }">
                 <el-button type="primary" link @click="$router.push(`/services/${row.id}`)">办理</el-button>
+                <el-button
+                  :type="row.isFavorited ? 'danger' : 'default'"
+                  link
+                  @click.stop="handleToggleFavorite(row)"
+                >
+                  <el-icon><Star :fill="row.isFavorited ? '#f56c6c' : 'none'" /></el-icon>
+                  {{ row.isFavorited ? '已收藏' : '收藏' }}
+                </el-button>
+                <el-button
+                  :type="row.isSubscribed ? 'success' : 'default'"
+                  link
+                  @click.stop="handleToggleSubscription(row)"
+                >
+                  <el-icon><Bell :fill="row.isSubscribed ? '#67c23a' : 'none'" /></el-icon>
+                  {{ row.isSubscribed ? '已订阅' : '订阅' }}
+                </el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -100,24 +121,30 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
-import { getServiceItems } from '@/api/service-item'
+import { getRecommendedItems } from '@/api/service-item'
 import { getApplications } from '@/api/application'
 import { getUnreadCount } from '@/api/message'
+import { toggleFavorite } from '@/api/favorite'
+import { toggleSubscription } from '@/api/subscription'
+import { ElMessage } from 'element-plus'
+import { Star, Bell, TrendCharts } from '@element-plus/icons-vue'
 import type { ServiceItem, Application } from '@/types'
 
 const router = useRouter()
 const userStore = useUserStore()
 
 const loading = ref(false)
-const hotItems = ref<ServiceItem[]>([])
+const recommendedItems = ref<ServiceItem[]>([])
 const recentApps = ref<Application[]>([])
 const unreadCount = ref(0)
 
 const quickLinks = [
   { label: '事项查询', path: '/services', icon: 'Search', color: '#409eff' },
+  { label: '我的收藏', path: '/my-favorites', icon: 'Star', color: '#f56c6c' },
+  { label: '我的订阅', path: '/my-subscriptions', icon: 'Bell', color: '#e6a23c' },
   { label: '进度跟踪', path: '/my-applications', icon: 'List', color: '#67c23a' },
-  { label: '消息中心', path: '/messages', icon: 'Bell', color: '#e6a23c' },
-  { label: '管理后台', path: userStore.isAdmin ? '/admin' : '/home', icon: 'Setting', color: '#f56c6c' },
+  { label: '消息中心', path: '/messages', icon: 'MessageBox', color: '#909399' },
+  { label: '管理后台', path: userStore.isAdmin ? '/admin' : '/home', icon: 'Setting', color: '#909399' },
 ]
 
 const myAppCount = computed(() => recentApps.value.length)
@@ -145,16 +172,44 @@ const getStatusText = (status: string) => {
   return map[status] || status
 }
 
+const handleToggleFavorite = async (item: ServiceItem) => {
+  if (!userStore.user) return
+  try {
+    const res = await toggleFavorite(userStore.user.id, item.id)
+    item.isFavorited = res.favorited
+    if (res.favorited) {
+      item.favoriteCount = (item.favoriteCount || 0) + 1
+      ElMessage.success('收藏成功')
+    } else {
+      item.favoriteCount = Math.max(0, (item.favoriteCount || 0) - 1)
+      ElMessage.success('已取消收藏')
+    }
+  } catch (e) {
+    ElMessage.error('操作失败')
+  }
+}
+
+const handleToggleSubscription = async (item: ServiceItem) => {
+  if (!userStore.user) return
+  try {
+    const res = await toggleSubscription(userStore.user.id, item.id)
+    item.isSubscribed = res.subscribed
+    ElMessage.success(res.subscribed ? '订阅成功，将及时接收该事项的更新通知' : '已取消订阅')
+  } catch (e) {
+    ElMessage.error('操作失败')
+  }
+}
+
 const loadData = async () => {
   if (!userStore.user) return
   loading.value = true
   try {
     const [items, apps, count] = await Promise.all([
-      getServiceItems(),
+      getRecommendedItems(userStore.user.id, 5),
       getApplications(userStore.user.id),
       getUnreadCount(userStore.user.id),
     ])
-    hotItems.value = items.slice(0, 5)
+    recommendedItems.value = items
     recentApps.value = apps.slice(0, 5)
     unreadCount.value = count
   } finally {
@@ -230,5 +285,12 @@ onMounted(loadData)
   font-size: 14px;
   color: #303133;
   font-weight: 500;
+}
+.hot-count {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #f56c6c;
+  font-size: 13px;
 }
 </style>
