@@ -113,6 +113,7 @@ export class WindowCoordinationService {
         content: `您的【${serviceItem.name}】已在${data.windowNumber}号窗口受理成功，排队号：${queueNumber}，受理编号：${handlingNo}。请耐心等待叫号。`,
         type: 'window',
         serviceItemId: data.serviceItemId,
+        windowHandlingId: saved.id,
       });
 
       await queryRunner.commitTransaction();
@@ -270,6 +271,7 @@ export class WindowCoordinationService {
           content: contentMap[status] || '',
           type: 'window',
           serviceItemId: handling.serviceItemId,
+          windowHandlingId: handling.id,
         });
       }
 
@@ -362,6 +364,7 @@ export class WindowCoordinationService {
         type: 'window',
         applicationId: application.id,
         serviceItemId: handling.serviceItemId,
+        windowHandlingId: handling.id,
       });
 
       await queryRunner.commitTransaction();
@@ -420,6 +423,7 @@ export class WindowCoordinationService {
           content: `请${queueNumber}号到${data.windowNumber}号窗口办理【${handling.serviceItem?.name}】。`,
           type: 'queue',
           serviceItemId: handling.serviceItemId,
+          windowHandlingId: handling.id,
         });
       }
 
@@ -561,6 +565,7 @@ export class WindowCoordinationService {
           content: contentMap[status] || '',
           type: 'queue',
           serviceItemId: call.serviceItemId,
+          windowHandlingId: call.windowHandlingId,
         });
       }
 
@@ -598,6 +603,7 @@ export class WindowCoordinationService {
           content: `请${call.queueNumber}号尽快到${call.windowNumber}号窗口办理【${serviceItem?.name || ''}】（第${call.callCount}次叫号）。`,
           type: 'queue',
           serviceItemId: call.serviceItemId,
+          windowHandlingId: call.windowHandlingId,
         });
       }
 

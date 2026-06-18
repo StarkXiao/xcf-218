@@ -29,6 +29,9 @@ export class Message {
   @Column({ nullable: true })
   serviceItemId: number;
 
+  @Column({ nullable: true })
+  windowHandlingId: number;
+
   @CreateDateColumn()
   createdAt: Date;
 }

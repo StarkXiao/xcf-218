@@ -93,6 +93,14 @@
             >
               查看证明
             </el-button>
+            <el-button
+              v-if="(row.type === 'window' || row.type === 'queue') && row.windowHandlingId"
+              type="warning"
+              link
+              @click.stop="goToWindowHandling(row.windowHandlingId)"
+            >
+              查看窗口记录
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -125,6 +133,8 @@ const getMessageType = (type: string) => {
     supplement: 'warning',
     subscription: 'success',
     certificate: 'success',
+    window: 'warning',
+    queue: 'danger',
     system: 'info',
   }
   return map[type] || 'info'
@@ -137,6 +147,8 @@ const getMessageTypeText = (type: string) => {
     supplement: '补件通知',
     subscription: '订阅通知',
     certificate: '证明通知',
+    window: '窗口通知',
+    queue: '叫号通知',
     system: '系统通知',
   }
   return map[type] || '系统通知'
@@ -165,6 +177,10 @@ const handleRowClick = async (row: Message) => {
       goToReview(row.applicationId)
     } else {
       goToSupplement()
+    }
+  } else if (row.type === 'window' || row.type === 'queue') {
+    if (row.windowHandlingId) {
+      goToWindowHandling(row.windowHandlingId)
     }
   } else if (row.appointmentId) {
     goToAppointment(row.appointmentId)
@@ -210,6 +226,14 @@ const goToServiceItem = (serviceItemId: number) => {
 
 const goToCertificates = () => {
   router.push('/my-certificates')
+}
+
+const goToWindowHandling = (id: number) => {
+  if (userStore.isAdmin) {
+    router.push(`/admin/window-coordination?highlight=${id}`)
+  } else {
+    router.push(`/my-window-handlings?highlight=${id}`)
+  }
 }
 
 onMounted(loadMessages)

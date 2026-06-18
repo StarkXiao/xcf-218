@@ -123,6 +123,7 @@ export interface Message {
   applicationId?: number
   appointmentId?: number
   serviceItemId?: number
+  windowHandlingId?: number
   createdAt: string
 }
 
