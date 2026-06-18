@@ -74,9 +74,29 @@
           </div>
 
           <div v-if="application.riskTips && application.riskTips.length > 0" class="content-section">
-            <h3 class="section-title">风险提示</h3>
+            <div class="section-header">
+              <h3 class="section-title">风险评估</h3>
+              <el-tag :type="getRiskTagType(application.riskLevel)" effect="dark" size="large">
+                {{ getRiskLevelText(application.riskLevel) }}
+              </el-tag>
+            </div>
+            <div class="risk-progress">
+              <div class="risk-progress-bar">
+                <div
+                  class="risk-progress-fill"
+                  :style="{ width: `${application.riskLevel * 20}%`, background: getRiskColor(application.riskLevel) }"
+                ></div>
+              </div>
+              <div class="risk-level-labels">
+                <span>低</span>
+                <span>中</span>
+                <span>高</span>
+                <span>较高</span>
+                <span>极高</span>
+              </div>
+            </div>
             <el-alert
-              :title="`风险等级：${application.riskLevel} 级`"
+              title="风险提示"
               type="warning"
               :closable="false"
               show-icon
@@ -239,6 +259,19 @@ const getRiskTagType = (level: number) => {
   return 'success'
 }
 
+const getRiskLevelText = (level: number) => {
+  const texts = ['极低风险', '低风险', '中风险', '较高风险', '高风险', '极高风险']
+  return texts[level] || '未知'
+}
+
+const getRiskColor = (level: number) => {
+  if (level <= 1) return '#67c23a'
+  if (level <= 2) return '#e6a23c'
+  if (level <= 3) return '#e6a23c'
+  if (level <= 4) return '#f56c6c'
+  return '#f56c6c'
+}
+
 const getTimelineType = (status: string) => {
   if (status === 'failed') return 'danger'
   if (status === 'warning') return 'warning'
@@ -357,6 +390,33 @@ onMounted(loadData)
   font-size: 13px;
   color: #e6a23c;
   margin-bottom: 4px;
+}
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.risk-progress {
+  margin-bottom: 16px;
+}
+.risk-progress-bar {
+  height: 8px;
+  background: #ebeef5;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+.risk-progress-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease, background 0.3s ease;
+}
+.risk-level-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #909399;
 }
 .preview-container {
   display: flex;
