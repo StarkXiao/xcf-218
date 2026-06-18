@@ -578,6 +578,9 @@ const handleSubmit = async () => {
   const formDataObj = new FormData()
   formDataObj.append('userId', String(userStore.user.id))
   formDataObj.append('serviceItemId', String(route.params.id))
+  if (currentTemplate.value?.id) {
+    formDataObj.append('materialTemplateId', String(currentTemplate.value.id))
+  }
 
   const formPayload: Record<string, any> = {
     name: formData.name,

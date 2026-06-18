@@ -20,6 +20,7 @@ interface MaterialInfo {
 interface CreateApplicationData {
   userId: number;
   serviceItemId: number;
+  materialTemplateId?: number;
   formData: any;
   materialsInfo: MaterialInfo[];
   files: Express.Multer.File[];
@@ -82,7 +83,7 @@ export class ApplicationService {
       throw new NotFoundException('用户不存在');
     }
 
-    const previewResult = await this.validateMaterials(data.serviceItemId, undefined, data.formData, data.materialsInfo, data.files);
+    const previewResult = await this.validateMaterials(data.serviceItemId, data.materialTemplateId, data.formData, data.materialsInfo, data.files);
     if (!previewResult.passed) {
       await this.sendPreviewFailedMessage(data.userId, data.serviceItemId, previewResult, item.name);
       const errorMessages = previewResult.errors.map(e => e.message).join('；');
@@ -99,6 +100,7 @@ export class ApplicationService {
         applicationNo,
         userId: data.userId,
         serviceItemId: data.serviceItemId,
+        materialTemplateId: data.materialTemplateId,
         formData: JSON.stringify(data.formData),
         materials: JSON.stringify(data.materialsInfo),
         status: 'submitted',
@@ -344,7 +346,7 @@ export class ApplicationService {
   async resubmit(data: ResubmitData) {
     const originalApp = await this.appRepository.findOne({
       where: { id: data.originalApplicationId },
-      relations: ['serviceItem', 'materialFiles', 'progressRecords'],
+      relations: ['serviceItem', 'materialFiles', 'progressRecords', 'materialTemplate'],
     });
     if (!originalApp) {
       throw new NotFoundException('原始申请不存在');
@@ -381,8 +383,8 @@ export class ApplicationService {
     }
 
     const previewResult = await this.validateMaterials(
-      data.originalApplicationId,
-      undefined,
+      originalApp.serviceItemId,
+      originalApp.materialTemplateId,
       data.formData,
       data.materialsInfo,
       allFiles,
@@ -413,6 +415,7 @@ export class ApplicationService {
         applicationNo,
         userId: data.userId,
         serviceItemId: originalApp.serviceItemId,
+        materialTemplateId: originalApp.materialTemplateId,
         formData: JSON.stringify(data.formData),
         materials: JSON.stringify(data.materialsInfo),
         status: 'submitted',

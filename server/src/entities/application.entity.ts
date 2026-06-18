@@ -5,6 +5,7 @@ import { ProgressRecord } from './progress-record.entity';
 import { MaterialFile } from './material-file.entity';
 import { SupplementRecord } from './supplement-record.entity';
 import { WithdrawalRecord } from './withdrawal-record.entity';
+import { MaterialTemplate } from './material-template.entity';
 
 @Entity('applications')
 export class Application {
@@ -27,6 +28,13 @@ export class Application {
   @ManyToOne(() => ServiceItem)
   @JoinColumn({ name: 'serviceItemId' })
   serviceItem: ServiceItem;
+
+  @Column({ nullable: true })
+  materialTemplateId: number;
+
+  @ManyToOne(() => MaterialTemplate)
+  @JoinColumn({ name: 'materialTemplateId' })
+  materialTemplate: MaterialTemplate;
 
   @Column('text')
   formData: string;

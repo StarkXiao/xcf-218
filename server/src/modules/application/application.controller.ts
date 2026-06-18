@@ -13,6 +13,7 @@ export class ApplicationController {
     @Body() body: {
       userId: string;
       serviceItemId: string;
+      materialTemplateId?: string;
       formData: string;
       materialsInfo: string;
     },
@@ -20,6 +21,7 @@ export class ApplicationController {
     return this.service.create({
       userId: Number(body.userId),
       serviceItemId: Number(body.serviceItemId),
+      materialTemplateId: body.materialTemplateId ? Number(body.materialTemplateId) : undefined,
       formData: JSON.parse(body.formData),
       materialsInfo: JSON.parse(body.materialsInfo || '[]'),
       files,

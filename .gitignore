@@ -52,10 +52,6 @@ Thumbs.db
 coverage/
 *.lcov
 
-# Uploads
-uploads/
-*/uploads/
-
 # Misc
 .cache/
 .temp/
