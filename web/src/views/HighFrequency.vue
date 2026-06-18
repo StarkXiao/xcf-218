@@ -88,7 +88,7 @@
                   <p class="service-desc">{{ item.serviceItem?.description }}</p>
                   <div class="service-meta">
                     <span><el-icon><Clock /></el-icon> {{ item.serviceItem?.processingDays }} 个工作日</span>
-                    <span><el-icon><TrendCharts /></el-icon> 热度 {{ getHeatScore(item.serviceItem) }}</span>
+                    <span><el-icon><TrendCharts /></el-icon> 热度 {{ getHotItemHeatScore(item) }}</span>
                   </div>
                   <div class="service-actions">
                     <el-button type="primary" size="small" @click.stop="handleApply(item)">
@@ -192,13 +192,18 @@ const getStatusType = (category: string): string => {
   return map[category] || 'info'
 }
 
-const getHeatScore = (item?: ServiceItem) => {
+const getHeatScore = (item?: ServiceItem, extraClicks = 0) => {
   if (!item) return 0
   const applications = item.applicationCount || 0
   const favorites = item.favoriteCount || 0
   const subscriptions = item.subscriptionCount || 0
   const views = item.viewCount || 0
-  return Math.round(applications * 10 + favorites * 5 + subscriptions * 3 + views * 0.1)
+  return Math.round(applications * 10 + favorites * 5 + subscriptions * 3 + views * 0.1 + extraClicks * 2)
+}
+
+const getHotItemHeatScore = (hotItem?: HotItem) => {
+  if (!hotItem?.serviceItem) return 0
+  return getHeatScore(hotItem.serviceItem, hotItem.clickCount || 0)
 }
 
 const filteredItems = computed(() => {

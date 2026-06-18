@@ -94,11 +94,12 @@ export class HighFrequencyService {
   }
 
   async getHeatStatistics(serviceItemId: number) {
-    const [totalApplications, totalFavorites, totalSubscriptions, totalViews] = await Promise.all([
+    const [totalApplications, totalFavorites, totalSubscriptions, totalViews, totalClicks] = await Promise.all([
       this.applicationRepository.count({ where: { serviceItemId } }),
       this.favoriteService.getFavoriteCount(serviceItemId),
       this.subscriptionService.getSubscriptionCount(serviceItemId),
       this.serviceItemRepository.findOne({ where: { id: serviceItemId }, select: ['viewCount'] }),
+      this.hotItemRepository.sum('clickCount', { serviceItemId }),
     ]);
 
     return {
@@ -106,7 +107,8 @@ export class HighFrequencyService {
       totalFavorites,
       totalSubscriptions,
       totalViews: totalViews?.viewCount || 0,
-      heatScore: this.calculateHeatScore(totalApplications, totalFavorites, totalSubscriptions, totalViews?.viewCount || 0),
+      totalClicks: totalClicks || 0,
+      heatScore: this.calculateHeatScore(totalApplications, totalFavorites, totalSubscriptions, totalViews?.viewCount || 0, totalClicks || 0),
     };
   }
 
@@ -115,8 +117,8 @@ export class HighFrequencyService {
     return { success: true };
   }
 
-  private calculateHeatScore(applications: number, favorites: number, subscriptions: number, views: number): number {
-    return Math.round(applications * 10 + favorites * 5 + subscriptions * 3 + views * 0.1);
+  private calculateHeatScore(applications: number, favorites: number, subscriptions: number, views: number, clicks: number = 0): number {
+    return Math.round(applications * 10 + favorites * 5 + subscriptions * 3 + views * 0.1 + clicks * 2);
   }
 
   private async enrichWithUserInfo(items: HotItem[], userId?: number) {

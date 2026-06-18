@@ -62,7 +62,7 @@
           <div class="hot-banner" v-if="hotBanners.length > 0">
             <el-carousel :interval="4000" arrow="hover" height="140px">
               <el-carousel-item v-for="banner in hotBanners" :key="banner.id">
-                <div class="mini-banner" @click="$router.push(`/apply/${banner.serviceItemId}`)">
+                <div class="mini-banner" @click="handleHotBannerClick(banner)">
                   <div class="mini-banner-content">
                     <h4>{{ banner.bannerTitle || banner.serviceItem?.name }}</h4>
                     <p>{{ banner.bannerSubtitle || banner.serviceItem?.description }}</p>
@@ -78,7 +78,7 @@
               v-for="item in hotQuickItems.slice(0, 5)"
               :key="item.id"
               class="hot-quick-item"
-              @click="$router.push(`/apply/${item.serviceItemId}`)"
+              @click="handleHotQuickClick(item)"
             >
               <el-icon :size="24" color="#409eff"><Lightning /></el-icon>
               <span>{{ item.serviceItem?.name }}</span>
@@ -167,7 +167,7 @@ import { getApplications } from '@/api/application'
 import { getUnreadCount } from '@/api/message'
 import { toggleFavorite } from '@/api/favorite'
 import { toggleSubscription } from '@/api/subscription'
-import { getBanners, getQuickApplyItems } from '@/api/high-frequency'
+import { getBanners, getQuickApplyItems, incrementClickCount } from '@/api/high-frequency'
 import { ElMessage } from 'element-plus'
 import { Star, Bell, TrendCharts, HotWater, Document, Lightning } from '@element-plus/icons-vue'
 import type { ServiceItem, Application, HotItem } from '@/types'
@@ -241,6 +241,24 @@ const handleToggleSubscription = async (item: ServiceItem) => {
     ElMessage.success(res.subscribed ? '订阅成功，将及时接收该事项的更新通知' : '已取消订阅')
   } catch (e) {
     ElMessage.error('操作失败')
+  }
+}
+
+const handleHotBannerClick = async (banner: HotItem) => {
+  try {
+    await incrementClickCount(banner.id)
+  } catch (e) {}
+  if (banner.serviceItemId) {
+    router.push(`/apply/${banner.serviceItemId}`)
+  }
+}
+
+const handleHotQuickClick = async (item: HotItem) => {
+  try {
+    await incrementClickCount(item.id)
+  } catch (e) {}
+  if (item.serviceItemId) {
+    router.push(`/apply/${item.serviceItemId}`)
   }
 }
 

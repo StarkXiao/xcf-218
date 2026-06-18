@@ -71,6 +71,7 @@ export interface HeatStatistics {
   totalFavorites: number
   totalSubscriptions: number
   totalViews: number
+  totalClicks: number
   heatScore: number
 }
 
