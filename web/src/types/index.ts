@@ -241,3 +241,41 @@ export interface ProxyStatistics {
   activeRelations: number
   highRiskCount: number
 }
+
+export interface Certificate {
+  id: number
+  certificateNo: string
+  userId: number
+  user?: User
+  applicationId: number
+  application?: Application
+  serviceItemId: number
+  serviceItem?: ServiceItem
+  certificateType: string
+  certificateData: string
+  certificateContent?: string
+  filePath?: string
+  fileName?: string
+  status: string
+  issuedBy?: number
+  issuedAt?: string
+  expiredAt?: string
+  archived: boolean
+  archivedAt?: string
+  archivedBy?: number
+  downloadRecords?: CertificateDownloadRecord[]
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CertificateDownloadRecord {
+  id: number
+  certificateId: number
+  certificate?: Certificate
+  userId: number
+  user?: User
+  action: string
+  ipAddress?: string
+  userAgent?: string
+  createdAt: string
+}

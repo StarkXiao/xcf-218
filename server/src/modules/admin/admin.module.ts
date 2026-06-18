@@ -5,13 +5,16 @@ import { ProgressRecord } from '../../entities/progress-record.entity';
 import { Message } from '../../entities/message.entity';
 import { ServiceItem } from '../../entities/service-item.entity';
 import { User } from '../../entities/user.entity';
+import { Certificate } from '../../entities/certificate.entity';
+import { CertificateDownloadRecord } from '../../entities/certificate-download-record.entity';
 import { AdminController } from './admin.controller';
 import { AdminService } from './admin.service';
+import { CertificateService } from '../certificate/certificate.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Application, ProgressRecord, Message, ServiceItem, User])],
+  imports: [TypeOrmModule.forFeature([Application, ProgressRecord, Message, ServiceItem, User, Certificate, CertificateDownloadRecord])],
   controllers: [AdminController],
-  providers: [AdminService],
+  providers: [AdminService, CertificateService],
   exports: [AdminService],
 })
 export class AdminModule {}

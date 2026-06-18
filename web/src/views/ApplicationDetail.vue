@@ -132,6 +132,24 @@
               show-icon
             />
           </div>
+
+          <div v-if="certificate" class="content-section">
+            <h3 class="section-title">电子证明</h3>
+            <el-card class="cert-card">
+              <div class="cert-info">
+                <div>
+                  <p class="cert-no">证明编号：{{ certificate.certificateNo }}</p>
+                  <p class="cert-type">证明类型：{{ certificate.certificateType }}</p>
+                  <p class="cert-date">发证日期：{{ formatDate(certificate.issuedAt || certificate.createdAt) }}</p>
+                </div>
+                <div class="cert-actions">
+                  <el-button type="primary" @click="viewCertificate">查看详情</el-button>
+                  <el-button type="success" @click="previewCert">预览</el-button>
+                  <el-button type="primary" plain @click="downloadCert">下载</el-button>
+                </div>
+              </div>
+            </el-card>
+          </div>
         </el-col>
 
         <el-col :span="10">
@@ -237,7 +255,8 @@ import {
   getMaterialVersions,
   uploadSupplementMaterial,
 } from '@/api/supplement-center'
-import type { Application, MaterialFile, SupplementRecord } from '@/types'
+import { getCertificates, previewCertificate, downloadCertificate } from '@/api/certificate'
+import type { Application, MaterialFile, SupplementRecord, Certificate } from '@/types'
 import dayjs from 'dayjs'
 
 const route = useRoute()
@@ -263,6 +282,8 @@ const uploadFieldName = ref('')
 const uploadMaterialName = ref('')
 const uploadFileObj = ref<File | null>(null)
 const submitting = ref(false)
+
+const certificate = ref<Certificate | null>(null)
 
 const sortedRecords = computed(() => {
   if (!application.value?.progressRecords) return []
@@ -312,6 +333,13 @@ const loadData = async () => {
       currentSupplement.value = supplementRecords.value.find((r) => r.status === 'pending') || null
       if (currentSupplement.value) {
         rejectedMaterials.value = currentSupplement.value.rejectedMaterials || []
+      }
+    }
+
+    if (application.value.status === 'approved' || application.value.status === 'completed') {
+      if (userStore.user?.id) {
+        const certs = await getCertificates(userStore.user.id)
+        certificate.value = certs.find(c => c.applicationId === appId) || null
       }
     }
   } finally {
@@ -393,6 +421,25 @@ const submitUpload = async () => {
   }
 }
 
+const viewCertificate = () => {
+  if (certificate.value) {
+    router.push(`/certificates/${certificate.value.id}`)
+  }
+}
+
+const previewCert = () => {
+  if (certificate.value && userStore.user?.id) {
+    window.open(previewCertificate(certificate.value.id, userStore.user.id), '_blank')
+  }
+}
+
+const downloadCert = () => {
+  if (certificate.value && userStore.user?.id) {
+    ElMessage.success('开始下载证明文件')
+    window.location.href = downloadCertificate(certificate.value.id, userStore.user.id)
+  }
+}
+
 onMounted(loadData)
 </script>
 
@@ -460,5 +507,31 @@ onMounted(loadData)
 }
 .no-preview p {
   margin-top: 12px;
+}
+.cert-card {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border: 1px solid #7dd3fc;
+}
+.cert-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.cert-no {
+  font-size: 16px;
+  font-weight: 600;
+  color: #0369a1;
+  margin-bottom: 8px;
+}
+.cert-type,
+.cert-date {
+  font-size: 14px;
+  color: #0284c7;
+  margin-bottom: 4px;
+}
+.cert-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 </style>

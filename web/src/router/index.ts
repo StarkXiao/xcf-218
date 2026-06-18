@@ -109,6 +109,18 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '我的订阅' },
       },
       {
+        path: 'my-certificates',
+        name: 'MyCertificates',
+        component: () => import('@/views/MyCertificates.vue'),
+        meta: { title: '我的证明' },
+      },
+      {
+        path: 'certificates/:id',
+        name: 'CertificateDetail',
+        component: () => import('@/views/CertificateDetail.vue'),
+        meta: { title: '证明详情' },
+      },
+      {
         path: 'admin/service-items',
         name: 'AdminServiceItems',
         component: () => import('@/views/AdminServiceItems.vue'),
@@ -149,6 +161,12 @@ const routes: RouteRecordRaw[] = [
         name: 'AdminReview',
         component: () => import('@/views/AdminReview.vue'),
         meta: { title: '申请审核', admin: true },
+      },
+      {
+        path: 'admin/certificates',
+        name: 'AdminCertificates',
+        component: () => import('@/views/AdminCertificates.vue'),
+        meta: { title: '证明管理', admin: true },
       },
     ],
   },

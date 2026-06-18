@@ -77,6 +77,7 @@
             </template>
             <el-menu-item index="/my-favorites">我的收藏</el-menu-item>
             <el-menu-item index="/my-subscriptions">我的订阅</el-menu-item>
+            <el-menu-item index="/my-certificates">我的证明</el-menu-item>
           </el-sub-menu>
           <el-menu-item index="/messages">
             <el-icon><Bell /></el-icon>
@@ -93,6 +94,7 @@
             <el-menu-item index="/admin/appointments">预约办理</el-menu-item>
             <el-menu-item index="/admin/supplement">补件管理</el-menu-item>
             <el-menu-item index="/admin/proxy">代办人审核</el-menu-item>
+            <el-menu-item index="/admin/certificates">证明管理</el-menu-item>
           </el-sub-menu>
         </el-menu>
       </el-aside>
@@ -139,11 +141,14 @@ const activeMenu = computed(() => {
   if (route.path.startsWith('/applications')) return '/my-applications'
   if (route.path.startsWith('/my-favorites')) return '/my-favorites'
   if (route.path.startsWith('/my-subscriptions')) return '/my-subscriptions'
+  if (route.path.startsWith('/my-certificates')) return '/my-certificates'
+  if (route.path.startsWith('/certificates')) return '/my-certificates'
   if (route.path.startsWith('/admin/service-items')) return '/admin/service-items'
   if (route.path.startsWith('/admin/schedule')) return '/admin/schedule'
   if (route.path.startsWith('/admin/appointments')) return '/admin/appointments'
   if (route.path.startsWith('/admin/supplement')) return '/admin/supplement'
   if (route.path.startsWith('/admin/proxy')) return '/admin/proxy'
+  if (route.path.startsWith('/admin/certificates')) return '/admin/certificates'
   if (route.path.startsWith('/admin/review')) return '/admin'
   if (route.path.startsWith('/admin')) return '/admin'
   if (route.path.startsWith('/supplement-center')) return '/supplement-center'

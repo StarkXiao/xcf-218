@@ -14,6 +14,8 @@ import { ProxyProgressRecord } from './entities/proxy-progress-record.entity';
 import { ProxyRelation } from './entities/proxy-relation.entity';
 import { Favorite } from './entities/favorite.entity';
 import { Subscription } from './entities/subscription.entity';
+import { Certificate } from './entities/certificate.entity';
+import { CertificateDownloadRecord } from './entities/certificate-download-record.entity';
 import { UserModule } from './modules/user/user.module';
 import { ServiceItemModule } from './modules/service-item/service-item.module';
 import { ApplicationModule } from './modules/application/application.module';
@@ -27,6 +29,7 @@ import { SupplementCenterModule } from './modules/supplement-center/supplement-c
 import { ProxyModule } from './modules/proxy/proxy.module';
 import { FavoriteModule } from './modules/favorite/favorite.module';
 import { SubscriptionModule } from './modules/subscription/subscription.module';
+import { CertificateModule } from './modules/certificate/certificate.module';
 import { SeedService } from './seed.service';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -40,13 +43,13 @@ import * as path from 'path';
       username: 'root',
       password: 'root123456',
       database: 'government_service',
-      entities: [User, ServiceItem, Application, ProgressRecord, Message, MaterialFile, Schedule, Appointment, SupplementRecord, ProxyApplication, ProxyProgressRecord, ProxyRelation, Favorite, Subscription],
+      entities: [User, ServiceItem, Application, ProgressRecord, Message, MaterialFile, Schedule, Appointment, SupplementRecord, ProxyApplication, ProxyProgressRecord, ProxyRelation, Favorite, Subscription, Certificate, CertificateDownloadRecord],
       synchronize: true,
       logging: false,
       charset: 'utf8mb4',
       timezone: '+08:00',
     }),
-    TypeOrmModule.forFeature([User, ServiceItem, Application, ProgressRecord, Message, MaterialFile, Schedule, Appointment, SupplementRecord, ProxyApplication, ProxyProgressRecord, ProxyRelation, Favorite, Subscription]),
+    TypeOrmModule.forFeature([User, ServiceItem, Application, ProgressRecord, Message, MaterialFile, Schedule, Appointment, SupplementRecord, ProxyApplication, ProxyProgressRecord, ProxyRelation, Favorite, Subscription, Certificate, CertificateDownloadRecord]),
     UserModule,
     ServiceItemModule,
     ApplicationModule,
@@ -60,6 +63,7 @@ import * as path from 'path';
     ProxyModule,
     FavoriteModule,
     SubscriptionModule,
+    CertificateModule,
   ],
   providers: [SeedService],
 })
@@ -78,6 +82,10 @@ export class AppModule implements OnModuleInit {
     const proxyDir = path.join(uploadDir, 'proxy');
     if (!fs.existsSync(proxyDir)) {
       fs.mkdirSync(proxyDir, { recursive: true });
+    }
+    const certificatesDir = path.join(uploadDir, 'certificates');
+    if (!fs.existsSync(certificatesDir)) {
+      fs.mkdirSync(certificatesDir, { recursive: true });
     }
     await this.seedService.seed();
   }

@@ -85,6 +85,14 @@
             >
               查看事项
             </el-button>
+            <el-button
+              v-if="row.type === 'certificate'"
+              type="success"
+              link
+              @click.stop="goToCertificates"
+            >
+              查看证明
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -116,6 +124,7 @@ const getMessageType = (type: string) => {
     appointment: 'success',
     supplement: 'warning',
     subscription: 'success',
+    certificate: 'success',
     system: 'info',
   }
   return map[type] || 'info'
@@ -127,6 +136,7 @@ const getMessageTypeText = (type: string) => {
     appointment: '预约通知',
     supplement: '补件通知',
     subscription: '订阅通知',
+    certificate: '证明通知',
     system: '系统通知',
   }
   return map[type] || '系统通知'
@@ -148,7 +158,9 @@ const handleRowClick = async (row: Message) => {
   if (!row.read) {
     await markOneRead(row.id)
   }
-  if (row.type === 'supplement') {
+  if (row.type === 'certificate') {
+    goToCertificates()
+  } else if (row.type === 'supplement') {
     if (userStore.isAdmin && row.applicationId) {
       goToReview(row.applicationId)
     } else {
@@ -194,6 +206,10 @@ const goToReview = (applicationId: number) => {
 
 const goToServiceItem = (serviceItemId: number) => {
   router.push(`/services/${serviceItemId}`)
+}
+
+const goToCertificates = () => {
+  router.push('/my-certificates')
 }
 
 onMounted(loadMessages)

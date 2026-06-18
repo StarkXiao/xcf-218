@@ -6,6 +6,7 @@ import { ProgressRecord } from '../../entities/progress-record.entity';
 import { Message } from '../../entities/message.entity';
 import { ServiceItem } from '../../entities/service-item.entity';
 import { User } from '../../entities/user.entity';
+import { CertificateService } from '../certificate/certificate.service';
 
 @Injectable()
 export class AdminService {
@@ -15,6 +16,7 @@ export class AdminService {
     @InjectRepository(Message) private readonly messageRepository: Repository<Message>,
     @InjectRepository(ServiceItem) private readonly itemRepository: Repository<ServiceItem>,
     @InjectRepository(User) private readonly userRepository: Repository<User>,
+    private readonly certificateService: CertificateService,
   ) {}
 
   async getStatistics() {
@@ -91,6 +93,14 @@ export class AdminService {
       type: 'application',
       applicationId: id,
     });
+
+    if (action === 'approve' || action === 'complete') {
+      try {
+        await this.certificateService.generateCertificate(id, reviewerId);
+      } catch (e) {
+        console.error('生成电子证明失败:', e);
+      }
+    }
 
     return app;
   }
