@@ -787,57 +787,80 @@ export class CrossRegionService {
 
     const roles = ['applicant', 'local_admin', 'remote_admin'];
 
+    const allAdmins = await this.userRepository.find({ where: { role: 'admin' } });
+    const localAdmins = allAdmins.filter(u => u.departmentCode === localDept.code);
+    const remoteAdmins = allAdmins.filter(u => u.departmentCode === remoteDept.code);
+    const unassignedAdmins = allAdmins.filter(u => !u.departmentCode);
+
     for (const role of roles) {
       const template = templates[role];
       if (!template) continue;
 
-      let targetUserId: number | null = null;
-      let targetDepartmentId: number | null = null;
-
       if (role === 'applicant') {
-        targetUserId = userId;
         await queryRunner.manager.save(Message, {
-          userId: targetUserId,
+          userId,
           title: template.title,
           content: template.content,
           type: 'cross_region',
           applicationId: null,
         });
+
+        await queryRunner.manager.save(CrossRegionMessageLog, {
+          crossRegionApplicationId,
+          targetRole: role,
+          targetUserId: userId,
+          targetDepartmentId: null,
+          title: template.title,
+          content: template.content,
+          messageType: event,
+          sent: true,
+          sentAt: new Date(),
+        });
       } else if (role === 'local_admin') {
-        targetDepartmentId = localDept.id;
-        const localAdmins = await this.userRepository.find({ where: { role: 'admin' } });
-        for (const admin of localAdmins) {
+        const targets = localAdmins.length > 0 ? localAdmins : unassignedAdmins;
+        for (const admin of targets) {
           await queryRunner.manager.save(Message, {
             userId: admin.id,
             title: template.title,
             content: template.content,
             type: 'cross_region',
+          });
+
+          await queryRunner.manager.save(CrossRegionMessageLog, {
+            crossRegionApplicationId,
+            targetRole: role,
+            targetUserId: admin.id,
+            targetDepartmentId: localDept.id,
+            title: template.title,
+            content: template.content,
+            messageType: event,
+            sent: true,
+            sentAt: new Date(),
           });
         }
       } else if (role === 'remote_admin') {
-        targetDepartmentId = remoteDept.id;
-        const remoteAdmins = await this.userRepository.find({ where: { role: 'admin' } });
-        for (const admin of remoteAdmins) {
+        const targets = remoteAdmins.length > 0 ? remoteAdmins : unassignedAdmins;
+        for (const admin of targets) {
           await queryRunner.manager.save(Message, {
             userId: admin.id,
             title: template.title,
             content: template.content,
             type: 'cross_region',
           });
+
+          await queryRunner.manager.save(CrossRegionMessageLog, {
+            crossRegionApplicationId,
+            targetRole: role,
+            targetUserId: admin.id,
+            targetDepartmentId: remoteDept.id,
+            title: template.title,
+            content: template.content,
+            messageType: event,
+            sent: true,
+            sentAt: new Date(),
+          });
         }
       }
-
-      await queryRunner.manager.save(CrossRegionMessageLog, {
-        crossRegionApplicationId,
-        targetRole: role,
-        targetUserId,
-        targetDepartmentId,
-        title: template.title,
-        content: template.content,
-        messageType: event,
-        sent: true,
-        sentAt: new Date(),
-      });
     }
   }
 

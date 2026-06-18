@@ -23,6 +23,9 @@ export class User {
   @Column({ default: 'user' })
   role: string;
 
+  @Column({ nullable: true })
+  departmentCode: string;
+
   @CreateDateColumn()
   createdAt: Date;
 
