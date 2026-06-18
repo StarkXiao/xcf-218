@@ -1,19 +1,5 @@
 import request from '@/utils/request'
-import type { MaterialFile } from '@/types'
-
-export interface VersionDiff {
-  fieldName: string
-  materialName: string
-  version1: MaterialFile
-  version2: MaterialFile
-  differences: {
-    fileSizeChanged: boolean
-    sizeDiff: number
-    fileNameChanged: boolean
-    mimeTypeChanged: boolean
-    uploadTimeDiff: number
-  }
-}
+import type { MaterialFile, VersionDiff } from '@/types'
 
 export interface FileStats {
   total: number

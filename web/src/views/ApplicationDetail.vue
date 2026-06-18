@@ -510,78 +510,85 @@
     <el-dialog v-model="compareVisible" title="版本比对结果" width="900px" destroy-on-close>
       <div v-if="versionDiff">
         <el-descriptions :column="2" border>
-          <el-descriptions-item label="材料名称" :span="2">{{ versionDiff.materialName }}</el-descriptions-item>
+          <el-descriptions-item label="材料名称" :span="2">{{ versionDiff.v1?.materialName }}</el-descriptions-item>
           <el-descriptions-item label="比对版本">
-            <el-tag>v{{ versionDiff.version1.version }}</el-tag>
+            <el-tag>v{{ versionDiff.v1?.version }}</el-tag>
             <span style="margin: 0 8px">→</span>
-            <el-tag type="warning">v{{ versionDiff.version2.version }}</el-tag>
+            <el-tag type="warning">v{{ versionDiff.v2?.version }}</el-tag>
           </el-descriptions-item>
-          <el-descriptions-item label="时间间隔">
-            {{ formatTimeDiff(versionDiff.differences.uploadTimeDiff) }}
+          <el-descriptions-item label="是否变更">
+            <el-tag :type="versionDiff.changed ? 'warning' : 'success'">
+              {{ versionDiff.changed ? '有变更' : '无变更' }}
+            </el-tag>
           </el-descriptions-item>
         </el-descriptions>
 
-        <el-table :data="compareItems" style="width: 100%; margin-top: 16px">
-          <el-table-column prop="label" label="对比项" width="150" />
-          <el-table-column label="版本 1">
-            <template #default="{ row }">
-              <span :class="{ 'changed': row.changed }">{{ row.v1 }}</span>
+        <el-descriptions :column="1" border style="margin-top: 16px">
+          <el-descriptions-item
+            v-for="item in versionDiff.fields"
+            :key="item.field"
+            :label="item.label"
+          >
+            <template v-if="item.changed">
+              <span style="text-decoration: line-through; color: #f56c6c; margin-right: 12px">
+                {{ formatDiffValue(item.oldValue) }}
+              </span>
+              <span style="color: #67c23a">→ {{ formatDiffValue(item.newValue) }}</span>
+              <el-tag type="warning" size="small" style="margin-left: 8px">已变更</el-tag>
             </template>
-          </el-table-column>
-          <el-table-column label="版本 2">
-            <template #default="{ row }">
-              <span :class="{ 'changed': row.changed }">{{ row.v2 }}</span>
+            <template v-else>
+              <span>{{ formatDiffValue(item.oldValue) }}</span>
             </template>
-          </el-table-column>
-          <el-table-column label="差异" width="120">
-            <template #default="{ row }">
-              <el-tag v-if="row.changed" type="warning">有变化</el-tag>
-              <el-tag v-else type="success">无变化</el-tag>
-            </template>
-          </el-table-column>
-        </el-table>
+          </el-descriptions-item>
+        </el-descriptions>
 
-        <div v-if="canPreviewBoth" class="compare-preview">
+        <div v-if="versionDiff.canPreview" class="compare-preview">
           <h4 style="margin: 20px 0 12px">并排预览</h4>
           <div class="compare-preview-grid">
             <div class="compare-preview-item">
               <div class="compare-preview-title">
-                版本 v{{ versionDiff.version1.version }}
-                <el-tag size="small" style="margin-left: 8px">{{ versionDiff.version1.originalName }}</el-tag>
+                版本 v{{ versionDiff.v1?.version }}
+                <el-tag size="small" style="margin-left: 8px">{{ versionDiff.v1?.originalName }}</el-tag>
               </div>
               <div class="compare-preview-content">
                 <img
-                  v-if="versionDiff.version1.mimeType.startsWith('image/')"
-                  :src="getPreviewUrl(versionDiff.version1.id)"
+                  v-if="getPreviewType(versionDiff.v1?.originalName || '') === 'image'"
+                  :src="getPreviewUrl(versionDiff.v1!.id)"
                   class="compare-preview-img"
                 />
                 <iframe
-                  v-else-if="versionDiff.version1.mimeType === 'application/pdf'"
-                  :src="getPreviewUrl(versionDiff.version1.id)"
+                  v-else-if="getPreviewType(versionDiff.v1?.originalName || '') === 'pdf'"
+                  :src="getPreviewUrl(versionDiff.v1!.id)"
                   class="compare-preview-pdf"
                 ></iframe>
                 <div v-else class="no-preview-small">
                   <el-icon><Document /></el-icon>
                   <span>不支持预览</span>
                 </div>
+              </div>
+              <div style="text-align: center; margin-top: 12px">
+                <el-button size="small" @click="downloadFile(versionDiff.v1!)">
+                  <el-icon><Download /></el-icon>
+                  下载此版本
+                </el-button>
               </div>
             </div>
             <div class="compare-preview-item">
               <div class="compare-preview-title">
-                版本 v{{ versionDiff.version2.version }}
+                版本 v{{ versionDiff.v2?.version }}
                 <el-tag size="small" type="warning" style="margin-left: 8px">
-                  {{ versionDiff.version2.originalName }}
+                  {{ versionDiff.v2?.originalName }}
                 </el-tag>
               </div>
               <div class="compare-preview-content">
                 <img
-                  v-if="versionDiff.version2.mimeType.startsWith('image/')"
-                  :src="getPreviewUrl(versionDiff.version2.id)"
+                  v-if="getPreviewType(versionDiff.v2?.originalName || '') === 'image'"
+                  :src="getPreviewUrl(versionDiff.v2!.id)"
                   class="compare-preview-img"
                 />
                 <iframe
-                  v-else-if="versionDiff.version2.mimeType === 'application/pdf'"
-                  :src="getPreviewUrl(versionDiff.version2.id)"
+                  v-else-if="getPreviewType(versionDiff.v2?.originalName || '') === 'pdf'"
+                  :src="getPreviewUrl(versionDiff.v2!.id)"
                   class="compare-preview-pdf"
                 ></iframe>
                 <div v-else class="no-preview-small">
@@ -589,9 +596,32 @@
                   <span>不支持预览</span>
                 </div>
               </div>
+              <div style="text-align: center; margin-top: 12px">
+                <el-button size="small" @click="downloadFile(versionDiff.v2!)">
+                  <el-icon><Download /></el-icon>
+                  下载此版本
+                </el-button>
+              </div>
             </div>
           </div>
         </div>
+
+        <el-alert
+          v-else-if="versionDiff.changed"
+          title="文件内容可能发生变化，但不支持在线预览对比，请下载后查看"
+          type="info"
+          show-icon
+          :closable="false"
+          style="margin-top: 16px"
+        />
+        <el-alert
+          v-else
+          title="两个版本完全相同"
+          type="success"
+          show-icon
+          :closable="false"
+          style="margin-top: 16px"
+        />
       </div>
     </el-dialog>
 
@@ -681,7 +711,6 @@ import {
 import { useUserStore } from '@/stores/user'
 import {
   getApplicationById,
-  downloadMaterial,
   requestWithdraw,
   canWithdraw,
   canResubmit,
@@ -694,6 +723,7 @@ import {
 } from '@/api/supplement-center'
 import {
   getPreviewUrl,
+  getDownloadUrl,
   reuploadMaterialFile,
   deleteMaterialFile,
   getMaterialVersions as getUploadVersions,
@@ -707,8 +737,9 @@ import type {
   SupplementRecord,
   Certificate,
   WithdrawalRecord,
+  VersionDiff,
 } from '@/types'
-import type { VersionDiff, FileStats } from '@/api/upload'
+import type { FileStats } from '@/api/upload'
 import dayjs from 'dayjs'
 
 const route = useRoute()
@@ -786,46 +817,31 @@ const sortedRecords = computed(() => {
   return [...application.value.progressRecords].reverse()
 })
 
-const canPreviewBoth = computed(() => {
-  if (!versionDiff.value) return false
-  const m1 = versionDiff.value.version1.mimeType
-  const m2 = versionDiff.value.version2.mimeType
-  return (
-    (m1.startsWith('image/') || m1 === 'application/pdf') &&
-    (m2.startsWith('image/') || m2 === 'application/pdf')
-  )
-})
+const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp']
+const PDF_EXTENSION = 'pdf'
 
-const compareItems = computed(() => {
-  if (!versionDiff.value) return []
-  const d = versionDiff.value.differences
-  return [
-    {
-      label: '文件名',
-      v1: versionDiff.value.version1.originalName,
-      v2: versionDiff.value.version2.originalName,
-      changed: d.fileNameChanged,
-    },
-    {
-      label: '文件大小',
-      v1: formatFileSize(versionDiff.value.version1.fileSize),
-      v2: formatFileSize(versionDiff.value.version2.fileSize) + (d.sizeDiff !== 0 ? ` (${d.sizeDiff > 0 ? '+' : ''}${formatFileSize(Math.abs(d.sizeDiff))})` : ''),
-      changed: d.fileSizeChanged,
-    },
-    {
-      label: '文件类型',
-      v1: versionDiff.value.version1.mimeType,
-      v2: versionDiff.value.version2.mimeType,
-      changed: d.mimeTypeChanged,
-    },
-    {
-      label: '上传时间',
-      v1: formatDate(versionDiff.value.version1.createdAt),
-      v2: formatDate(versionDiff.value.version2.createdAt),
-      changed: true,
-    },
-  ]
-})
+const getPreviewType = (fileName: string) => {
+  const ext = fileName.split('.').pop()?.toLowerCase()
+  if (IMAGE_EXTENSIONS.includes(ext || '')) return 'image'
+  if (ext === PDF_EXTENSION) return 'pdf'
+  return 'unknown'
+}
+
+const formatDiffValue = (v: any) => {
+  if (v === null || v === undefined) return '-'
+  if (typeof v === 'boolean') return v ? '是' : '否'
+  if (typeof v === 'number' && v > 1000) {
+    return formatFileSize(v)
+  }
+  if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}/.test(v)) {
+    return formatDate(v)
+  }
+  return String(v)
+}
+
+const downloadFile = (file: MaterialFile) => {
+  window.open(getDownloadUrl(file.id), '_blank')
+}
 
 const getStatusType = (status: string) => {
   const map: Record<string, string> = {
@@ -957,10 +973,6 @@ const openPreview = (file: MaterialFile) => {
   previewFileData.value = file
   previewUrl.value = getPreviewUrl(file.id)
   previewVisible.value = true
-}
-
-const downloadFile = (file: MaterialFile) => {
-  window.open(downloadMaterial(file.id), '_blank')
 }
 
 const viewVersionHistory = async (fieldName: string, materialName: string) => {

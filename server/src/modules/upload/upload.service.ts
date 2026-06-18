@@ -8,18 +8,20 @@ import { Message } from '../../entities/message.entity';
 import * as fs from 'fs';
 import * as path from 'path';
 
+export interface VersionDiffField {
+  field: string;
+  label: string;
+  oldValue: any;
+  newValue: any;
+  changed: boolean;
+}
+
 export interface VersionDiff {
-  fieldName: string;
-  materialName: string;
-  version1: MaterialFile;
-  version2: MaterialFile;
-  differences: {
-    fileSizeChanged: boolean;
-    sizeDiff: number;
-    fileNameChanged: boolean;
-    mimeTypeChanged: boolean;
-    uploadTimeDiff: number;
-  };
+  v1: MaterialFile | null;
+  v2: MaterialFile | null;
+  fields: VersionDiffField[];
+  changed: boolean;
+  canPreview: boolean;
 }
 
 @Injectable()
@@ -106,14 +108,6 @@ export class UploadService {
 
       oldFile.isCurrent = false;
       await queryRunner.manager.save(oldFile);
-
-      if (fs.existsSync(oldFile.filePath)) {
-        try {
-          fs.unlinkSync(oldFile.filePath);
-        } catch (e) {
-          // ignore file deletion error
-        }
-      }
 
       const newFile = this.fileRepository.create({
         applicationId: oldFile.applicationId,
@@ -220,18 +214,60 @@ export class UploadService {
       throw new NotFoundException('指定的版本文件不存在');
     }
 
-    return {
-      fieldName,
-      materialName: v1.materialName,
-      version1: v1,
-      version2: v2,
-      differences: {
-        fileSizeChanged: v1.fileSize !== v2.fileSize,
-        sizeDiff: v2.fileSize - v1.fileSize,
-        fileNameChanged: v1.originalName !== v2.originalName,
-        mimeTypeChanged: v1.mimeType !== v2.mimeType,
-        uploadTimeDiff: new Date(v2.createdAt).getTime() - new Date(v1.createdAt).getTime(),
+    const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'];
+    const canPreview = (file: MaterialFile) => {
+      const ext = file.originalName.split('.').pop()?.toLowerCase();
+      if (!ext) return false;
+      return [...IMAGE_EXTENSIONS, 'pdf'].includes(ext);
+    };
+
+    const fields: VersionDiffField[] = [
+      {
+        field: 'originalName',
+        label: '文件名',
+        oldValue: v1.originalName,
+        newValue: v2.originalName,
+        changed: v1.originalName !== v2.originalName,
       },
+      {
+        field: 'fileSize',
+        label: '文件大小',
+        oldValue: v1.fileSize,
+        newValue: v2.fileSize,
+        changed: v1.fileSize !== v2.fileSize,
+      },
+      {
+        field: 'mimeType',
+        label: '文件类型',
+        oldValue: v1.mimeType,
+        newValue: v2.mimeType,
+        changed: v1.mimeType !== v2.mimeType,
+      },
+      {
+        field: 'version',
+        label: '版本号',
+        oldValue: v1.version,
+        newValue: v2.version,
+        changed: v1.version !== v2.version,
+      },
+      {
+        field: 'createdAt',
+        label: '上传时间',
+        oldValue: v1.createdAt,
+        newValue: v2.createdAt,
+        changed: v1.createdAt !== v2.createdAt,
+      },
+    ];
+
+    const changed = fields.some(f => f.changed);
+    const bothCanPreview = canPreview(v1) && canPreview(v2);
+
+    return {
+      v1,
+      v2,
+      fields,
+      changed,
+      canPreview: bothCanPreview,
     };
   }
 
