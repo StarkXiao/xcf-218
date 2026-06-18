@@ -9,6 +9,9 @@ import { MaterialFile } from './entities/material-file.entity';
 import { Schedule } from './entities/schedule.entity';
 import { Appointment } from './entities/appointment.entity';
 import { SupplementRecord } from './entities/supplement-record.entity';
+import { ProxyApplication } from './entities/proxy-application.entity';
+import { ProxyProgressRecord } from './entities/proxy-progress-record.entity';
+import { ProxyRelation } from './entities/proxy-relation.entity';
 import { UserModule } from './modules/user/user.module';
 import { ServiceItemModule } from './modules/service-item/service-item.module';
 import { ApplicationModule } from './modules/application/application.module';
@@ -19,6 +22,7 @@ import { UploadModule } from './modules/upload/upload.module';
 import { ScheduleModule } from './modules/schedule/schedule.module';
 import { AppointmentModule } from './modules/appointment/appointment.module';
 import { SupplementCenterModule } from './modules/supplement-center/supplement-center.module';
+import { ProxyModule } from './modules/proxy/proxy.module';
 import { SeedService } from './seed.service';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -32,13 +36,13 @@ import * as path from 'path';
       username: 'root',
       password: 'root123456',
       database: 'government_service',
-      entities: [User, ServiceItem, Application, ProgressRecord, Message, MaterialFile, Schedule, Appointment, SupplementRecord],
+      entities: [User, ServiceItem, Application, ProgressRecord, Message, MaterialFile, Schedule, Appointment, SupplementRecord, ProxyApplication, ProxyProgressRecord, ProxyRelation],
       synchronize: true,
       logging: false,
       charset: 'utf8mb4',
       timezone: '+08:00',
     }),
-    TypeOrmModule.forFeature([User, ServiceItem, Application, ProgressRecord, Message, MaterialFile, Schedule, Appointment, SupplementRecord]),
+    TypeOrmModule.forFeature([User, ServiceItem, Application, ProgressRecord, Message, MaterialFile, Schedule, Appointment, SupplementRecord, ProxyApplication, ProxyProgressRecord, ProxyRelation]),
     UserModule,
     ServiceItemModule,
     ApplicationModule,
@@ -49,6 +53,7 @@ import * as path from 'path';
     ScheduleModule,
     AppointmentModule,
     SupplementCenterModule,
+    ProxyModule,
   ],
   providers: [SeedService],
 })
@@ -63,6 +68,10 @@ export class AppModule implements OnModuleInit {
     const materialsDir = path.join(uploadDir, 'materials');
     if (!fs.existsSync(materialsDir)) {
       fs.mkdirSync(materialsDir, { recursive: true });
+    }
+    const proxyDir = path.join(uploadDir, 'proxy');
+    if (!fs.existsSync(proxyDir)) {
+      fs.mkdirSync(proxyDir, { recursive: true });
     }
     await this.seedService.seed();
   }

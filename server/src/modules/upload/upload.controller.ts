@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Param, Delete, UseInterceptors, UploadedFile, UploadedFiles, Body, Res } from '@nestjs/common';
+import { Controller, Post, Get, Param, Delete, UseInterceptors, UploadedFile, UploadedFiles, Body, Res, NotFoundException } from '@nestjs/common';
 import { FileInterceptor, AnyFilesInterceptor } from '@nestjs/platform-express';
 import { UploadService } from './upload.service';
 import { Response } from 'express';
@@ -73,5 +73,24 @@ export class UploadController {
   @Delete(':id')
   deleteFile(@Param('id') id: string) {
     return this.service.deleteFile(+id);
+  }
+
+  @Get('proxy/:filename')
+  getProxyFile(@Param('filename') filename: string, @Res() res: Response) {
+    const filePath = path.join(process.cwd(), 'uploads', 'proxy', filename);
+    if (!fs.existsSync(filePath)) {
+      throw new NotFoundException('文件不存在');
+    }
+    const ext = path.extname(filename).toLowerCase();
+    const mimeTypes: Record<string, string> = {
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.png': 'image/png',
+      '.pdf': 'application/pdf',
+    };
+    const mimeType = mimeTypes[ext] || 'application/octet-stream';
+    res.setHeader('Content-Type', mimeType);
+    const fileStream = fs.createReadStream(filePath);
+    fileStream.pipe(res);
   }
 }

@@ -55,6 +55,18 @@
           </div>
         </el-card>
       </el-col>
+      <el-col :span="8">
+        <el-card class="card-hover" shadow="hover" @click="$router.push('/admin/proxy')" style="cursor: pointer">
+          <div class="quick-card">
+            <el-icon :size="40" color="#9b59b6"><UserFilled /></el-icon>
+            <div>
+              <div class="quick-title">代办人审核</div>
+              <div class="quick-desc">审核代办人申请，管理代理关系</div>
+            </div>
+            <el-icon :size="20" color="#c0c4cc"><ArrowRight /></el-icon>
+          </div>
+        </el-card>
+      </el-col>
     </el-row>
 
     <el-row :gutter="20" style="margin-top: 20px">
@@ -123,6 +135,7 @@ import {
   Tickets,
   ArrowRight,
   Refresh,
+  UserFilled,
 } from '@element-plus/icons-vue'
 import dayjs from 'dayjs'
 

@@ -61,6 +61,15 @@
             <el-icon><Refresh /></el-icon>
             <span>补件中心</span>
           </el-menu-item>
+          <el-sub-menu index="proxy">
+            <template #title>
+              <el-icon><UserFilled /></el-icon>
+              <span>代办人管理</span>
+            </template>
+            <el-menu-item index="/proxy-apply">代办人申请</el-menu-item>
+            <el-menu-item index="/my-proxy-applications">我的申请</el-menu-item>
+            <el-menu-item index="/proxy-relations">代办关系</el-menu-item>
+          </el-sub-menu>
           <el-menu-item index="/messages">
             <el-icon><Bell /></el-icon>
             <span>消息中心</span>
@@ -103,8 +112,13 @@ const activeMenu = computed(() => {
   if (route.path.startsWith('/admin/schedule')) return '/admin'
   if (route.path.startsWith('/admin/appointments')) return '/admin'
   if (route.path.startsWith('/admin/supplement')) return '/admin'
+  if (route.path.startsWith('/admin/proxy')) return '/admin'
   if (route.path.startsWith('/admin')) return '/admin'
   if (route.path.startsWith('/supplement-center')) return '/supplement-center'
+  if (route.path.startsWith('/proxy-apply')) return '/proxy-apply'
+  if (route.path.startsWith('/proxy-applications')) return '/my-proxy-applications'
+  if (route.path.startsWith('/my-proxy-applications')) return '/my-proxy-applications'
+  if (route.path.startsWith('/proxy-relations')) return '/proxy-relations'
   return route.path
 })
 

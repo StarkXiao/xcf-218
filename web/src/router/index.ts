@@ -73,6 +73,30 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '补件中心' },
       },
       {
+        path: 'proxy-apply',
+        name: 'ProxyApply',
+        component: () => import('@/views/ProxyApply.vue'),
+        meta: { title: '代办人申请' },
+      },
+      {
+        path: 'my-proxy-applications',
+        name: 'MyProxyApplications',
+        component: () => import('@/views/MyProxyApplications.vue'),
+        meta: { title: '我的代办申请' },
+      },
+      {
+        path: 'proxy-applications/:id',
+        name: 'ProxyApplicationDetail',
+        component: () => import('@/views/ProxyApplicationDetail.vue'),
+        meta: { title: '代办申请详情' },
+      },
+      {
+        path: 'proxy-relations',
+        name: 'ProxyRelations',
+        component: () => import('@/views/ProxyRelations.vue'),
+        meta: { title: '代办关系管理' },
+      },
+      {
         path: 'admin',
         name: 'Admin',
         component: () => import('@/views/AdminDashboard.vue'),
@@ -95,6 +119,12 @@ const routes: RouteRecordRaw[] = [
         name: 'AdminSupplement',
         component: () => import('@/views/AdminSupplement.vue'),
         meta: { title: '补件管理', admin: true },
+      },
+      {
+        path: 'admin/proxy',
+        name: 'AdminProxy',
+        component: () => import('@/views/AdminProxy.vue'),
+        meta: { title: '代办人审核', admin: true },
       },
       {
         path: 'admin/review/:id',

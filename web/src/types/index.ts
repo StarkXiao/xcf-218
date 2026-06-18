@@ -152,3 +152,60 @@ export interface AppointmentStats {
   cancelled: number
   no_show: number
 }
+
+export interface ProxyApplication {
+  id: number
+  applicationNo: string
+  principalId: number
+  principal?: User
+  proxyName: string
+  proxyIdCard: string
+  proxyPhone: string
+  proxyRelation?: string
+  authorizationScope: string
+  idCardFrontPath?: string
+  idCardBackPath?: string
+  authorizationLetterPath?: string
+  status: string
+  reviewerId?: number
+  reviewComment?: string
+  riskLevel: number
+  riskTips: string[]
+  progressRecords?: ProxyProgressRecord[]
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ProxyProgressRecord {
+  id: number
+  proxyApplicationId: number
+  step: string
+  status: string
+  remark: string
+  operatorId?: number
+  createdAt: string
+}
+
+export interface ProxyRelation {
+  id: number
+  principalId: number
+  principal?: User
+  proxyId: number
+  proxy?: User
+  proxyRelation?: string
+  authorizationScope: string
+  isActive: boolean
+  sourceApplicationId?: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ProxyStatistics {
+  totalApplications: number
+  submittedCount: number
+  reviewingCount: number
+  approvedCount: number
+  rejectedCount: number
+  activeRelations: number
+  highRiskCount: number
+}
