@@ -10,6 +10,7 @@ import { User } from '../../entities/user.entity';
 import { WithdrawalRecord } from '../../entities/withdrawal-record.entity';
 import { JointApplicationService } from '../joint-application/joint-application.service';
 import { MaterialPreviewService, PreviewResult } from '../material-preview/material-preview.service';
+import { MessageService } from '../message/message.service';
 
 interface MaterialInfo {
   name: string;
@@ -62,6 +63,7 @@ export class ApplicationService {
     private readonly jointApplicationService: JointApplicationService,
     private readonly dataSource: DataSource,
     private readonly materialPreviewService: MaterialPreviewService,
+    private readonly messageService: MessageService,
   ) {}
 
   generateApplicationNo() {
@@ -672,13 +674,15 @@ export class ApplicationService {
   }
 
   async updateStatus(id: number, status: string, comment?: string, reviewerId?: number) {
-    const app = await this.appRepository.findOne({ where: { id } });
+    const app = await this.appRepository.findOne({ where: { id }, relations: ['serviceItem'] });
     if (!app) throw new NotFoundException('申请不存在');
 
     const validStatuses = ['submitted', 'reviewing', 'approved', 'rejected', 'completed', 'supplementing'];
     if (!validStatuses.includes(status)) {
       throw new BadRequestException('无效的状态');
     }
+
+    const oldStatus = app.status;
 
     app.status = status;
     if (comment) app.reviewComment = comment;
@@ -726,6 +730,20 @@ export class ApplicationService {
       type: 'application',
       applicationId: id,
     });
+
+    try {
+      await this.messageService.sendStatusChangeNotification(
+        app.userId,
+        id,
+        oldStatus,
+        status,
+        app.applicationNo,
+        app.serviceItem?.name,
+        comment,
+      );
+    } catch (e) {
+      // ignore
+    }
 
     try {
       await this.jointApplicationService.syncSubApplicationStatus(id);

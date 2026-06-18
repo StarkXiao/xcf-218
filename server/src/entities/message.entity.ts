@@ -1,4 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { User } from './user.entity';
 
 @Entity('messages')
 export class Message {
@@ -7,6 +8,10 @@ export class Message {
 
   @Column()
   userId: number;
+
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'userId' })
+  user: User;
 
   @Column()
   title: string;
@@ -21,6 +26,9 @@ export class Message {
   type: string;
 
   @Column({ nullable: true })
+  reminderType: string;
+
+  @Column({ nullable: true })
   applicationId: number;
 
   @Column({ nullable: true })
@@ -31,6 +39,18 @@ export class Message {
 
   @Column({ nullable: true })
   windowHandlingId: number;
+
+  @Column({ nullable: true })
+  approvalRecordId: number;
+
+  @Column({ nullable: true })
+  oldStatus: string;
+
+  @Column({ nullable: true })
+  newStatus: string;
+
+  @Column({ nullable: true })
+  pendingHours: number;
 
   @CreateDateColumn()
   createdAt: Date;

@@ -187,11 +187,42 @@ export interface Message {
   content: string
   read: boolean
   type: string
+  reminderType?: string
   applicationId?: number
   appointmentId?: number
   serviceItemId?: number
   windowHandlingId?: number
+  approvalRecordId?: number
+  oldStatus?: string
+  newStatus?: string
+  pendingHours?: number
   createdAt: string
+}
+
+export interface TimeoutPendingItem {
+  recordId: number
+  applicationId: number
+  applicationNo: string
+  serviceItemName: string
+  applicantName: string
+  currentNodeName: string
+  approverId: number
+  approverName: string
+  pendingHours: number
+  createdAt: string
+}
+
+export interface AdminTodoAggregation {
+  pendingApprovals: number
+  pendingWithdrawals: number
+  pendingSupplements: number
+  submittedApplications: number
+  reviewingApplications: number
+  supplementingApplications: number
+  timeoutPendingCount: number
+  timeoutPendingItems: TimeoutPendingItem[]
+  pendingByNode: Record<string, number>
+  totalPending: number
 }
 
 export interface Statistics {

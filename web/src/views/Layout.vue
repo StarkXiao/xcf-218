@@ -113,7 +113,9 @@
           </el-sub-menu>
           <el-menu-item index="/messages">
             <el-icon><Bell /></el-icon>
-            <span>消息中心</span>
+            <el-badge :value="reminderBadgeCount" :hidden="reminderBadgeCount === 0" class="inline-badge">
+              消息中心
+            </el-badge>
           </el-menu-item>
           <el-sub-menu v-if="userStore.isAdmin" index="admin-menu">
             <template #title>
@@ -155,7 +157,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessageBox } from 'element-plus'
 import { useUserStore } from '@/stores/user'
-import { getUnreadCount } from '@/api/message'
+import { getUnreadCount, getUnreadReminderCount } from '@/api/message'
 import { getMyReminders } from '@/api/certificate-reminder'
 import {
   HomeFilled,
@@ -180,6 +182,7 @@ const userStore = useUserStore()
 
 const unreadCount = ref(0)
 const reminderCount = ref(0)
+const reminderBadgeCount = ref(0)
 
 const activeMenu = computed(() => {
   if (route.path.startsWith('/high-frequency')) return '/high-frequency'
@@ -244,6 +247,16 @@ const loadReminderCount = async () => {
   }
 }
 
+const loadReminderBadgeCount = async () => {
+  if (userStore.user?.id) {
+    try {
+      reminderBadgeCount.value = await getUnreadReminderCount(userStore.user.id)
+    } catch (error) {
+      // ignore
+    }
+  }
+}
+
 const goMessages = () => {
   router.push('/messages')
 }
@@ -263,10 +276,12 @@ const handleCommand = async (command: string) => {
 onMounted(() => {
   loadUnreadCount()
   loadReminderCount()
+  loadReminderBadgeCount()
 })
 watch(() => route.path, () => {
   loadUnreadCount()
   loadReminderCount()
+  loadReminderBadgeCount()
 })
 </script>
 
