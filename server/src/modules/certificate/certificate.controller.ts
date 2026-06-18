@@ -132,4 +132,29 @@ export class CertificateController {
   ) {
     return this.service.unarchiveCertificate(+id, body.operatorId);
   }
+
+  @Get('my/with-expiry-status')
+  getCertificatesWithExpiryStatus(@Req() req: any) {
+    const userId = req.headers['x-user-id'] ? parseInt(req.headers['x-user-id']) : 1;
+    return this.service.getCertificatesWithExpiryStatus(userId);
+  }
+
+  @Get(':id/renewal-info')
+  getRenewalInfo(
+    @Param('id') id: string,
+    @Req() req: any,
+  ) {
+    const userId = req.headers['x-user-id'] ? parseInt(req.headers['x-user-id']) : 1;
+    return this.service.getRenewalInfo(+id, userId);
+  }
+
+  @Post(':id/renew')
+  createRenewalApplication(
+    @Param('id') id: string,
+    @Body() body: { formData: any },
+    @Req() req: any,
+  ) {
+    const userId = req.headers['x-user-id'] ? parseInt(req.headers['x-user-id']) : 1;
+    return this.service.createRenewalApplication(+id, userId, body.formData);
+  }
 }

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like } from 'typeorm';
 import { Certificate } from '../../entities/certificate.entity';
@@ -7,6 +7,7 @@ import { Application } from '../../entities/application.entity';
 import { Message } from '../../entities/message.entity';
 import { User } from '../../entities/user.entity';
 import { ServiceItem } from '../../entities/service-item.entity';
+import { CertificateReminder } from '../../entities/certificate-reminder.entity';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -19,6 +20,7 @@ export class CertificateService {
     @InjectRepository(Message) private readonly messageRepository: Repository<Message>,
     @InjectRepository(User) private readonly userRepository: Repository<User>,
     @InjectRepository(ServiceItem) private readonly serviceItemRepository: Repository<ServiceItem>,
+    @InjectRepository(CertificateReminder) private readonly reminderRepository: Repository<CertificateReminder>,
   ) {}
 
   async generateCertificate(applicationId: number, operatorId: number): Promise<Certificate> {
@@ -278,5 +280,153 @@ export class CertificateService {
     const downloadCount = await this.downloadRecordRepository.count();
 
     return { total, generated, archived, downloadCount };
+  }
+
+  async getRenewalInfo(certificateId: number, userId: number) {
+    const cert = await this.findById(certificateId, userId);
+    if (!cert) {
+      throw new NotFoundException('证照不存在');
+    }
+
+    const originalServiceItem = cert.serviceItem;
+    let renewalServiceItem = await this.serviceItemRepository.findOne({
+      where: {
+        code: `${originalServiceItem?.code}_RENEW`,
+        active: true,
+        publishStatus: 'published',
+      },
+    });
+
+    if (!renewalServiceItem) {
+      renewalServiceItem = await this.serviceItemRepository.findOne({
+        where: {
+          category: originalServiceItem?.category,
+          active: true,
+          publishStatus: 'published',
+        },
+        order: { createdAt: 'DESC' },
+      });
+    }
+
+    if (!renewalServiceItem) {
+      renewalServiceItem = originalServiceItem;
+    }
+
+    const certData = JSON.parse(cert.certificateData || '{}');
+    const prefilledFormData = certData.formData || {};
+
+    const reminders = await this.reminderRepository.find({
+      where: { certificateId },
+      order: { createdAt: 'DESC' },
+      take: 5,
+    });
+
+    return {
+      certificate: {
+        id: cert.id,
+        certificateNo: cert.certificateNo,
+        certificateType: cert.certificateType,
+        expiredAt: cert.expiredAt,
+        issuedAt: cert.issuedAt,
+      },
+      renewalServiceItem,
+      prefilledFormData,
+      reminders,
+    };
+  }
+
+  async createRenewalApplication(
+    certificateId: number,
+    userId: number,
+    formData: any,
+  ) {
+    const cert = await this.findById(certificateId, userId);
+    if (!cert) {
+      throw new NotFoundException('证照不存在');
+    }
+
+    const renewalInfo = await this.getRenewalInfo(certificateId, userId);
+    const serviceItem = renewalInfo.renewalServiceItem;
+
+    if (!serviceItem) {
+      throw new NotFoundException('未找到可续办的事项');
+    }
+
+    const mergedFormData = {
+      ...renewalInfo.prefilledFormData,
+      ...formData,
+      _isRenewal: true,
+      _originalCertificateId: certificateId,
+      _originalCertificateNo: cert.certificateNo,
+    };
+
+    const applicationNo = this.generateRenewalApplicationNo();
+    const application = this.appRepository.create({
+      applicationNo,
+      userId,
+      serviceItemId: serviceItem.id,
+      formData: JSON.stringify(mergedFormData),
+      status: 'submitted',
+    });
+
+    const savedApp = await this.appRepository.save(application);
+
+    await this.messageRepository.save({
+      userId,
+      title: '续办申请已提交',
+      content: `您的证照（编号：${cert.certificateNo}）续办申请已提交，申请编号：${applicationNo}，请等待审核。`,
+      type: 'application',
+      applicationId: savedApp.id,
+    });
+
+    const reminders = await this.reminderRepository.find({
+      where: { certificateId, renewalInitiated: false },
+    });
+    for (const reminder of reminders) {
+      reminder.renewalInitiated = true;
+      reminder.renewalInitiatedAt = new Date();
+      await this.reminderRepository.save(reminder);
+    }
+
+    return savedApp;
+  }
+
+  private generateRenewalApplicationNo(): string {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    const rand = Math.random().toString(36).substring(2, 8).toUpperCase();
+    return `RENEW${y}${m}${d}${rand}`;
+  }
+
+  async getCertificatesWithExpiryStatus(userId: number) {
+    const certificates = await this.findByUserId(userId);
+    const now = new Date();
+
+    return certificates.map(cert => {
+      let expiryStatus = 'normal';
+      let daysToExpiry: number | null = null;
+
+      if (cert.expiredAt) {
+        const expiredAt = new Date(cert.expiredAt);
+        const diffTime = expiredAt.getTime() - now.getTime();
+        daysToExpiry = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        if (daysToExpiry < 0) {
+          expiryStatus = 'expired';
+        } else if (daysToExpiry <= 7) {
+          expiryStatus = 'urgent';
+        } else if (daysToExpiry <= 30) {
+          expiryStatus = 'expiring';
+        }
+      }
+
+      return {
+        ...cert,
+        expiryStatus,
+        daysToExpiry,
+      };
+    });
   }
 }

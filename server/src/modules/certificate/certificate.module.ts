@@ -6,12 +6,13 @@ import { Application } from '../../entities/application.entity';
 import { Message } from '../../entities/message.entity';
 import { User } from '../../entities/user.entity';
 import { ServiceItem } from '../../entities/service-item.entity';
+import { CertificateReminder } from '../../entities/certificate-reminder.entity';
 import { CertificateController } from './certificate.controller';
 import { CertificateService } from './certificate.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Certificate, CertificateDownloadRecord, Application, Message, User, ServiceItem]),
+    TypeOrmModule.forFeature([Certificate, CertificateDownloadRecord, Application, Message, User, ServiceItem, CertificateReminder]),
   ],
   controllers: [CertificateController],
   providers: [CertificateService],
