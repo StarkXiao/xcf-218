@@ -279,3 +279,71 @@ export interface CertificateDownloadRecord {
   userAgent?: string
   createdAt: string
 }
+
+export interface WindowHandling {
+  id: number
+  handlingNo: string
+  windowNumber: string
+  userId: number
+  user?: User
+  serviceItemId: number
+  serviceItem?: ServiceItem
+  applicationId?: number
+  application?: Application
+  queueNumber: string
+  applicantName?: string
+  applicantIdCard?: string
+  applicantPhone?: string
+  formData?: string
+  materials?: string
+  status: string
+  handlerId?: number
+  handler?: User
+  handlingRemark?: string
+  acceptedAt?: string
+  processingAt?: string
+  completedAt?: string
+  syncStatus?: string
+  syncRemark?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface QueueCall {
+  id: number
+  callNo: string
+  queueNumber: string
+  windowNumber: string
+  windowHandlingId?: number
+  windowHandling?: WindowHandling
+  userId?: number
+  user?: User
+  serviceItemId?: number
+  serviceItem?: ServiceItem
+  applicantName?: string
+  status: string
+  callCount: number
+  callerId?: number
+  caller?: User
+  calledAt?: string
+  arrivedAt?: string
+  missedAt?: string
+  createdAt: string
+}
+
+export interface WindowHandlingStats {
+  serviceItemId: number
+  serviceItemName: string
+  total: number
+  accepted: number
+  processing: number
+  completed: number
+  cancelled: number
+  synced: number
+}
+
+export interface DisplayCalls {
+  calling: QueueCall[]
+  waiting: WindowHandling[]
+  completed: QueueCall[]
+}

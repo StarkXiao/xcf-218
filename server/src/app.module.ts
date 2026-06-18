@@ -16,6 +16,8 @@ import { Favorite } from './entities/favorite.entity';
 import { Subscription } from './entities/subscription.entity';
 import { Certificate } from './entities/certificate.entity';
 import { CertificateDownloadRecord } from './entities/certificate-download-record.entity';
+import { WindowHandling } from './entities/window-handling.entity';
+import { QueueCall } from './entities/queue-call.entity';
 import { UserModule } from './modules/user/user.module';
 import { ServiceItemModule } from './modules/service-item/service-item.module';
 import { ApplicationModule } from './modules/application/application.module';
@@ -30,6 +32,7 @@ import { ProxyModule } from './modules/proxy/proxy.module';
 import { FavoriteModule } from './modules/favorite/favorite.module';
 import { SubscriptionModule } from './modules/subscription/subscription.module';
 import { CertificateModule } from './modules/certificate/certificate.module';
+import { WindowCoordinationModule } from './modules/window-coordination/window-coordination.module';
 import { SeedService } from './seed.service';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -43,13 +46,13 @@ import * as path from 'path';
       username: 'root',
       password: 'root123456',
       database: 'government_service',
-      entities: [User, ServiceItem, Application, ProgressRecord, Message, MaterialFile, Schedule, Appointment, SupplementRecord, ProxyApplication, ProxyProgressRecord, ProxyRelation, Favorite, Subscription, Certificate, CertificateDownloadRecord],
+      entities: [User, ServiceItem, Application, ProgressRecord, Message, MaterialFile, Schedule, Appointment, SupplementRecord, ProxyApplication, ProxyProgressRecord, ProxyRelation, Favorite, Subscription, Certificate, CertificateDownloadRecord, WindowHandling, QueueCall],
       synchronize: true,
       logging: false,
       charset: 'utf8mb4',
       timezone: '+08:00',
     }),
-    TypeOrmModule.forFeature([User, ServiceItem, Application, ProgressRecord, Message, MaterialFile, Schedule, Appointment, SupplementRecord, ProxyApplication, ProxyProgressRecord, ProxyRelation, Favorite, Subscription, Certificate, CertificateDownloadRecord]),
+    TypeOrmModule.forFeature([User, ServiceItem, Application, ProgressRecord, Message, MaterialFile, Schedule, Appointment, SupplementRecord, ProxyApplication, ProxyProgressRecord, ProxyRelation, Favorite, Subscription, Certificate, CertificateDownloadRecord, WindowHandling, QueueCall]),
     UserModule,
     ServiceItemModule,
     ApplicationModule,
@@ -64,6 +67,7 @@ import * as path from 'path';
     FavoriteModule,
     SubscriptionModule,
     CertificateModule,
+    WindowCoordinationModule,
   ],
   providers: [SeedService],
 })

@@ -121,6 +121,12 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '证明详情' },
       },
       {
+        path: 'my-window-handlings',
+        name: 'MyWindowHandlings',
+        component: () => import('@/views/MyWindowHandlings.vue'),
+        meta: { title: '窗口办理记录' },
+      },
+      {
         path: 'admin/service-items',
         name: 'AdminServiceItems',
         component: () => import('@/views/AdminServiceItems.vue'),
@@ -167,6 +173,18 @@ const routes: RouteRecordRaw[] = [
         name: 'AdminCertificates',
         component: () => import('@/views/AdminCertificates.vue'),
         meta: { title: '证明管理', admin: true },
+      },
+      {
+        path: 'admin/window-coordination',
+        name: 'AdminWindowCoordination',
+        component: () => import('@/views/AdminWindowHandling.vue'),
+        meta: { title: '窗口协同办理', admin: true },
+      },
+      {
+        path: 'admin/queue-display',
+        name: 'AdminQueueDisplay',
+        component: () => import('@/views/AdminQueueDisplay.vue'),
+        meta: { title: '叫号大屏', admin: true },
       },
     ],
   },

@@ -78,6 +78,7 @@
             <el-menu-item index="/my-favorites">我的收藏</el-menu-item>
             <el-menu-item index="/my-subscriptions">我的订阅</el-menu-item>
             <el-menu-item index="/my-certificates">我的证明</el-menu-item>
+            <el-menu-item index="/my-window-handlings">窗口办理</el-menu-item>
           </el-sub-menu>
           <el-menu-item index="/messages">
             <el-icon><Bell /></el-icon>
@@ -95,6 +96,8 @@
             <el-menu-item index="/admin/supplement">补件管理</el-menu-item>
             <el-menu-item index="/admin/proxy">代办人审核</el-menu-item>
             <el-menu-item index="/admin/certificates">证明管理</el-menu-item>
+            <el-menu-item index="/admin/window-coordination">窗口协同办理</el-menu-item>
+            <el-menu-item index="/admin/queue-display">叫号大屏</el-menu-item>
           </el-sub-menu>
         </el-menu>
       </el-aside>
@@ -149,6 +152,9 @@ const activeMenu = computed(() => {
   if (route.path.startsWith('/admin/supplement')) return '/admin/supplement'
   if (route.path.startsWith('/admin/proxy')) return '/admin/proxy'
   if (route.path.startsWith('/admin/certificates')) return '/admin/certificates'
+  if (route.path.startsWith('/admin/window-coordination')) return '/admin/window-coordination'
+  if (route.path.startsWith('/admin/queue-display')) return '/admin/queue-display'
+  if (route.path.startsWith('/my-window-handlings')) return '/my-window-handlings'
   if (route.path.startsWith('/admin/review')) return '/admin'
   if (route.path.startsWith('/admin')) return '/admin'
   if (route.path.startsWith('/supplement-center')) return '/supplement-center'
