@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Param, Query, Body } from '@nestjs/common';
+import { Controller, Post, Put, Get, Param, Query, Body } from '@nestjs/common';
 import { SubscriptionService } from './subscription.service';
 
 @Controller('subscriptions')
@@ -6,18 +6,20 @@ export class SubscriptionController {
   constructor(private readonly service: SubscriptionService) {}
 
   @Post('toggle')
-  toggle(
+  toggle(@Body() body: { userId: number; serviceItemId: number }) {
+    return this.service.toggle(body.userId, body.serviceItemId);
+  }
+
+  @Put('settings')
+  updateSettings(
     @Body() body: {
       userId: number;
       serviceItemId: number;
-      notifyOnUpdate?: boolean;
-      notifyOnStatusChange?: boolean;
+      notifyOnUpdate: boolean;
+      notifyOnStatusChange: boolean;
     },
   ) {
-    return this.service.toggle(body.userId, body.serviceItemId, {
-      notifyOnUpdate: body.notifyOnUpdate,
-      notifyOnStatusChange: body.notifyOnStatusChange,
-    });
+    return this.service.updateSettings(body.userId, body.serviceItemId, body.notifyOnUpdate, body.notifyOnStatusChange);
   }
 
   @Get()

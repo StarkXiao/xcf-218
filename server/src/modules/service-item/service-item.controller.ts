@@ -25,6 +25,11 @@ export class ServiceItemController {
     return this.service.getRecommended(userId ? +userId : undefined, limit ? +limit : 6);
   }
 
+  @Get('admin/all')
+  findAllAdmin(@Query('keyword') keyword?: string, @Query('category') category?: string) {
+    return this.service.findAllAdmin(keyword, category);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string, @Query('userId') userId?: string) {
     return this.service.findOne(+id, userId ? +userId : undefined);
@@ -53,11 +58,6 @@ export class ServiceItemController {
   @Put(':id/recommend')
   toggleRecommend(@Param('id') id: string, @Body() body: { recommended: boolean }) {
     return this.service.toggleRecommend(+id, body.recommended);
-  }
-
-  @Get('admin/all')
-  findAllAdmin(@Query('keyword') keyword?: string, @Query('category') category?: string) {
-    return this.service.findAllAdmin(keyword, category);
   }
 
   @Delete(':id')

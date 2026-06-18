@@ -73,7 +73,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
-import { getSubscriptions, toggleSubscription } from '@/api/subscription'
+import { getSubscriptions, toggleSubscription, updateSubscriptionSettings } from '@/api/subscription'
 import { checkFavorite, toggleFavorite } from '@/api/favorite'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import dayjs from 'dayjs'
@@ -111,7 +111,7 @@ const handleSettings = (row: SubWithFav) => {
 const saveSettings = async () => {
   if (!userStore.user) return
   try {
-    await toggleSubscription(
+    await updateSubscriptionSettings(
       userStore.user.id,
       currentSettings.id,
       currentSettings.notifyOnUpdate,

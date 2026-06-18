@@ -1,13 +1,17 @@
 import request from '@/utils/request'
 import type { Subscription } from '@/types'
 
-export const toggleSubscription = (
+export const toggleSubscription = (userId: number, serviceItemId: number) => {
+  return request.post('/subscriptions/toggle', { userId, serviceItemId })
+}
+
+export const updateSubscriptionSettings = (
   userId: number,
   serviceItemId: number,
-  notifyOnUpdate?: boolean,
-  notifyOnStatusChange?: boolean,
+  notifyOnUpdate: boolean,
+  notifyOnStatusChange: boolean,
 ) => {
-  return request.post('/subscriptions/toggle', { userId, serviceItemId, notifyOnUpdate, notifyOnStatusChange })
+  return request.put('/subscriptions/settings', { userId, serviceItemId, notifyOnUpdate, notifyOnStatusChange })
 }
 
 export const getSubscriptions = (userId: number) => {

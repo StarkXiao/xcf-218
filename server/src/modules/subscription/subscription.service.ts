@@ -13,15 +13,11 @@ export class SubscriptionService {
     @Inject(forwardRef(() => ServiceItemService)) private readonly serviceItemService: ServiceItemService,
   ) {}
 
-  async toggle(userId: number, serviceItemId: number, settings?: { notifyOnUpdate?: boolean; notifyOnStatusChange?: boolean }) {
+  async toggle(userId: number, serviceItemId: number) {
     const existing = await this.repository.findOne({ where: { userId, serviceItemId } });
     if (existing) {
       const newActive = !existing.active;
-      await this.repository.update(existing.id, {
-        active: newActive,
-        notifyOnUpdate: settings?.notifyOnUpdate ?? existing.notifyOnUpdate,
-        notifyOnStatusChange: settings?.notifyOnStatusChange ?? existing.notifyOnStatusChange,
-      });
+      await this.repository.update(existing.id, { active: newActive });
       await this.serviceItemService.updateCounts(serviceItemId);
       return { success: true, subscribed: newActive };
     }
@@ -29,12 +25,21 @@ export class SubscriptionService {
       userId,
       serviceItemId,
       active: true,
-      notifyOnUpdate: settings?.notifyOnUpdate ?? true,
-      notifyOnStatusChange: settings?.notifyOnStatusChange ?? true,
+      notifyOnUpdate: true,
+      notifyOnStatusChange: true,
     });
     await this.repository.save(subscription);
     await this.serviceItemService.updateCounts(serviceItemId);
     return { success: true, subscribed: true };
+  }
+
+  async updateSettings(userId: number, serviceItemId: number, notifyOnUpdate: boolean, notifyOnStatusChange: boolean) {
+    const existing = await this.repository.findOne({ where: { userId, serviceItemId, active: true } });
+    if (!existing) {
+      return { success: false, message: '未订阅该事项' };
+    }
+    await this.repository.update(existing.id, { notifyOnUpdate, notifyOnStatusChange });
+    return { success: true, notifyOnUpdate, notifyOnStatusChange };
   }
 
   async findByUserId(userId: number) {
