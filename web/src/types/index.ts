@@ -212,13 +212,42 @@ export interface TimeoutPendingItem {
   createdAt: string
 }
 
+export interface TodoItemBase {
+  applicationId: number
+  applicationNo: string
+  serviceItemName: string
+  applicantName: string
+  createdAt: string
+}
+
+export interface SubmittedTodoItem extends TodoItemBase {}
+
+export interface ApprovalTodoItem extends TodoItemBase {
+  recordId: number
+  currentNodeName: string
+  approverName: string
+}
+
+export interface WithdrawalTodoItem extends TodoItemBase {
+  withdrawalId: number
+  reason: string
+}
+
+export interface SupplementTodoItem extends TodoItemBase {
+  supplementId: number
+  operatorName: string
+  rejectReason: string
+}
+
 export interface AdminTodoAggregation {
-  pendingApprovals: number
-  pendingWithdrawals: number
-  pendingSupplements: number
-  submittedApplications: number
-  reviewingApplications: number
-  supplementingApplications: number
+  submittedCount: number
+  submittedItems: SubmittedTodoItem[]
+  approvalCount: number
+  approvalItems: ApprovalTodoItem[]
+  withdrawalCount: number
+  withdrawalItems: WithdrawalTodoItem[]
+  supplementCount: number
+  supplementItems: SupplementTodoItem[]
   timeoutPendingCount: number
   timeoutPendingItems: TimeoutPendingItem[]
   pendingByNode: Record<string, number>

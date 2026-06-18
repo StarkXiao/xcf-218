@@ -227,83 +227,145 @@
     </div>
 
     <div v-if="activeTab === 'admin-todos'" v-loading="todosLoading">
-      <el-row :gutter="16" style="margin-bottom: 16px">
-        <el-col :span="6">
-          <el-card shadow="hover" class="todo-stat-card">
-            <div class="todo-stat-number" style="color: #e6a23c">{{ adminTodos.submittedApplications }}</div>
-            <div class="todo-stat-label">待审核申请</div>
-          </el-card>
-        </el-col>
-        <el-col :span="6">
-          <el-card shadow="hover" class="todo-stat-card">
-            <div class="todo-stat-number" style="color: #409eff">{{ adminTodos.reviewingApplications }}</div>
-            <div class="todo-stat-label">审核中申请</div>
-          </el-card>
-        </el-col>
-        <el-col :span="6">
-          <el-card shadow="hover" class="todo-stat-card">
-            <div class="todo-stat-number" style="color: #f56c6c">{{ adminTodos.pendingApprovals }}</div>
-            <div class="todo-stat-label">待审批</div>
-          </el-card>
-        </el-col>
-        <el-col :span="6">
-          <el-card shadow="hover" class="todo-stat-card">
-            <div class="todo-stat-number" style="color: #e6a23c">{{ adminTodos.pendingWithdrawals }}</div>
-            <div class="todo-stat-label">待撤回审批</div>
-          </el-card>
-        </el-col>
-      </el-row>
-      <el-row :gutter="16" style="margin-bottom: 16px">
-        <el-col :span="6">
-          <el-card shadow="hover" class="todo-stat-card">
-            <div class="todo-stat-number" style="color: #909399">{{ adminTodos.supplementingApplications }}</div>
-            <div class="todo-stat-label">补件中申请</div>
-          </el-card>
-        </el-col>
-        <el-col :span="6">
-          <el-card shadow="hover" class="todo-stat-card">
-            <div class="todo-stat-number" style="color: #909399">{{ adminTodos.pendingSupplements }}</div>
-            <div class="todo-stat-label">待补件</div>
-          </el-card>
-        </el-col>
-        <el-col :span="6">
-          <el-card shadow="hover" class="todo-stat-card">
-            <div class="todo-stat-number" style="color: #f56c6c">{{ adminTodos.timeoutPendingCount }}</div>
-            <div class="todo-stat-label">超时待审</div>
-          </el-card>
-        </el-col>
-        <el-col :span="6">
-          <el-card shadow="hover" class="todo-stat-card">
-            <div class="todo-stat-number" style="color: #303133; font-size: 28px">{{ adminTodos.totalPending }}</div>
-            <div class="todo-stat-label">合计待办</div>
-          </el-card>
-        </el-col>
-      </el-row>
-
-      <el-row :gutter="16">
-        <el-col :span="12">
-          <el-card>
-            <template #header>
-              <span>审批节点分布</span>
-            </template>
-            <div v-for="(count, node) in adminTodos.pendingByNode" :key="node" class="pending-node-item">
-              <span class="pending-node-name">{{ node }}</span>
-              <el-tag type="danger" size="small">{{ count }}件</el-tag>
+      <el-card class="todo-total-card">
+        <div class="todo-total-row">
+          <div class="todo-total-main">
+            <span class="todo-total-label">去重待办总数</span>
+            <span class="todo-total-number">{{ adminTodos.totalPending }}</span>
+            <el-tag type="info" size="small" style="margin-left: 8px">按申请ID去重</el-tag>
+          </div>
+          <div class="todo-total-breakdown">
+            <div class="breakdown-chip">
+              <span class="breakdown-dot" style="background: #e6a23c"></span>
+              待初审 {{ adminTodos.submittedCount }}
             </div>
-            <el-empty v-if="Object.keys(adminTodos.pendingByNode).length === 0" description="暂无待审批节点" :image-size="60" />
-          </el-card>
-        </el-col>
-        <el-col :span="12">
-          <el-card>
-            <template #header>
-              <div style="display: flex; justify-content: space-between; align-items: center">
-                <span>超时待审列表</span>
-                <el-button type="primary" size="small" @click="activeTab = 'timeout'">
-                  查看全部
-                </el-button>
-              </div>
-            </template>
-            <div v-for="item in adminTodos.timeoutPendingItems.slice(0, 5)" :key="item.recordId" class="timeout-item">
+            <div class="breakdown-chip">
+              <span class="breakdown-dot" style="background: #f56c6c"></span>
+              待审批 {{ adminTodos.approvalCount }}
+              <el-tag v-if="adminTodos.timeoutPendingCount > 0" type="danger" size="small" style="margin-left: 4px">
+                超{{ adminTodos.timeoutPendingCount }}件
+              </el-tag>
+            </div>
+            <div class="breakdown-chip">
+              <span class="breakdown-dot" style="background: #e6a23c"></span>
+              待撤回 {{ adminTodos.withdrawalCount }}
+            </div>
+            <div class="breakdown-chip">
+              <span class="breakdown-dot" style="background: #909399"></span>
+              待补件 {{ adminTodos.supplementCount }}
+            </div>
+          </div>
+        </div>
+      </el-card>
+
+      <el-collapse v-model="expandedCategories" style="margin-top: 16px">
+        <el-collapse-item name="submitted">
+          <template #title>
+            <div class="collapse-title">
+              <el-tag type="warning" size="small">待初审</el-tag>
+              <span class="collapse-count">{{ adminTodos.submittedCount }}件</span>
+              <span class="collapse-hint">申请已提交，等待管理员审核</span>
+            </div>
+          </template>
+          <el-table :data="adminTodos.submittedItems" size="small" v-if="adminTodos.submittedItems.length > 0">
+            <el-table-column prop="applicationNo" label="编号" width="180" />
+            <el-table-column prop="serviceItemName" label="事项" min-width="160" />
+            <el-table-column prop="applicantName" label="申请人" width="100" />
+            <el-table-column label="提交时间" width="170">
+              <template #default="{ row }">{{ formatDate(row.createdAt) }}</template>
+            </el-table-column>
+            <el-table-column label="操作" width="120">
+              <template #default="{ row }">
+                <el-button type="primary" link size="small" @click="goToReview(row.applicationId)">审核</el-button>
+                <el-button type="primary" link size="small" @click="goToApplication(row.applicationId)">详情</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+          <el-empty v-else description="暂无待初审申请" :image-size="40" />
+        </el-collapse-item>
+
+        <el-collapse-item name="approval">
+          <template #title>
+            <div class="collapse-title">
+              <el-tag type="danger" size="small">待审批</el-tag>
+              <span class="collapse-count">{{ adminTodos.approvalCount }}件</span>
+              <el-tag v-if="adminTodos.timeoutPendingCount > 0" type="danger" size="small" style="margin-left: 4px">
+                含超时{{ adminTodos.timeoutPendingCount }}件
+              </el-tag>
+              <span class="collapse-hint">审批流程中的待处理任务</span>
+            </div>
+          </template>
+          <el-table :data="adminTodos.approvalItems" size="small" v-if="adminTodos.approvalItems.length > 0">
+            <el-table-column prop="applicationNo" label="编号" width="180" />
+            <el-table-column prop="serviceItemName" label="事项" min-width="140" />
+            <el-table-column prop="applicantName" label="申请人" width="90" />
+            <el-table-column prop="currentNodeName" label="节点" width="110" />
+            <el-table-column prop="approverName" label="审批人" width="90" />
+            <el-table-column label="操作" width="140">
+              <template #default="{ row }">
+                <el-button type="danger" link size="small" @click="handleSendReminder(row.recordId)">催办</el-button>
+                <el-button type="primary" link size="small" @click="goToApplication(row.applicationId)">详情</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+          <el-empty v-else description="暂无待审批任务" :image-size="40" />
+        </el-collapse-item>
+
+        <el-collapse-item name="withdrawal">
+          <template #title>
+            <div class="collapse-title">
+              <el-tag type="warning" size="small">待撤回审批</el-tag>
+              <span class="collapse-count">{{ adminTodos.withdrawalCount }}件</span>
+              <span class="collapse-hint">用户申请撤回，需管理员审批</span>
+            </div>
+          </template>
+          <el-table :data="adminTodos.withdrawalItems" size="small" v-if="adminTodos.withdrawalItems.length > 0">
+            <el-table-column prop="applicationNo" label="编号" width="180" />
+            <el-table-column prop="serviceItemName" label="事项" min-width="140" />
+            <el-table-column prop="applicantName" label="申请人" width="100" />
+            <el-table-column prop="reason" label="撤回原因" min-width="160" show-overflow-tooltip />
+            <el-table-column label="操作" width="160">
+              <template #default="{ row }">
+                <el-button type="warning" link size="small" @click="goToWithdrawalReview">审批</el-button>
+                <el-button type="primary" link size="small" @click="goToApplication(row.applicationId)">详情</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+          <el-empty v-else description="暂无待撤回审批" :image-size="40" />
+        </el-collapse-item>
+
+        <el-collapse-item name="supplement">
+          <template #title>
+            <div class="collapse-title">
+              <el-tag size="small">待补件</el-tag>
+              <span class="collapse-count">{{ adminTodos.supplementCount }}件</span>
+              <span class="collapse-hint">申请材料被退回，需用户补件</span>
+            </div>
+          </template>
+          <el-table :data="adminTodos.supplementItems" size="small" v-if="adminTodos.supplementItems.length > 0">
+            <el-table-column prop="applicationNo" label="编号" width="180" />
+            <el-table-column prop="serviceItemName" label="事项" min-width="140" />
+            <el-table-column prop="operatorName" label="退回人" width="100" />
+            <el-table-column prop="rejectReason" label="退回原因" min-width="160" show-overflow-tooltip />
+            <el-table-column label="操作" width="120">
+              <template #default="{ row }">
+                <el-button type="primary" link size="small" @click="goToApplication(row.applicationId)">详情</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+          <el-empty v-else description="暂无待补件" :image-size="40" />
+        </el-collapse-item>
+
+        <el-collapse-item name="timeout-detail">
+          <template #title>
+            <div class="collapse-title">
+              <el-tag type="danger" size="small">超时待审明细</el-tag>
+              <span class="collapse-count">{{ adminTodos.timeoutPendingCount }}件</span>
+              <span class="collapse-hint">超过24小时未处理的审批（属于待审批子集）</span>
+            </div>
+          </template>
+          <div v-if="adminTodos.timeoutPendingItems.length > 0">
+            <div v-for="item in adminTodos.timeoutPendingItems" :key="item.recordId" class="timeout-item">
               <div class="timeout-item-header">
                 <span class="timeout-item-no">{{ item.applicationNo }}</span>
                 <el-tag type="danger" size="small">{{ item.pendingHours }}h</el-tag>
@@ -311,16 +373,31 @@
               <div class="timeout-item-info">
                 {{ item.serviceItemName }} - {{ item.currentNodeName }} - 审批人：{{ item.approverName || '未指定' }}
               </div>
-              <div style="margin-top: 6px">
-                <el-button type="danger" size="small" @click="handleSendReminder(item.recordId)">
-                  催办
-                </el-button>
+              <div style="margin-top: 6px; display: flex; gap: 8px">
+                <el-button type="danger" size="small" @click="handleSendReminder(item.recordId)">催办</el-button>
+                <el-button type="primary" size="small" @click="goToApplication(item.applicationId)">查看申请</el-button>
               </div>
             </div>
-            <el-empty v-if="adminTodos.timeoutPendingItems.length === 0" description="暂无超时待审" :image-size="60" />
-          </el-card>
-        </el-col>
-      </el-row>
+          </div>
+          <el-empty v-else description="暂无超时待审" :image-size="40" />
+        </el-collapse-item>
+
+        <el-collapse-item name="node-dist">
+          <template #title>
+            <div class="collapse-title">
+              <el-tag type="info" size="small">审批节点分布</el-tag>
+              <span class="collapse-hint">待审批按节点维度的分布统计</span>
+            </div>
+          </template>
+          <div v-if="Object.keys(adminTodos.pendingByNode).length > 0">
+            <div v-for="(count, node) in adminTodos.pendingByNode" :key="node" class="pending-node-item">
+              <span class="pending-node-name">{{ node }}</span>
+              <el-tag type="danger" size="small">{{ count }}件</el-tag>
+            </div>
+          </div>
+          <el-empty v-else description="暂无待审批节点" :image-size="40" />
+        </el-collapse-item>
+      </el-collapse>
     </div>
   </div>
 </template>
@@ -354,13 +431,16 @@ const timeoutLoading = ref(false)
 const timeoutItems = ref<TimeoutPendingItem[]>([])
 
 const todosLoading = ref(false)
+const expandedCategories = ref<string[]>(['submitted', 'approval'])
 const adminTodos = ref<AdminTodoAggregation>({
-  pendingApprovals: 0,
-  pendingWithdrawals: 0,
-  pendingSupplements: 0,
-  submittedApplications: 0,
-  reviewingApplications: 0,
-  supplementingApplications: 0,
+  submittedCount: 0,
+  submittedItems: [],
+  approvalCount: 0,
+  approvalItems: [],
+  withdrawalCount: 0,
+  withdrawalItems: [],
+  supplementCount: 0,
+  supplementItems: [],
   timeoutPendingCount: 0,
   timeoutPendingItems: [],
   pendingByNode: {},
@@ -619,25 +699,67 @@ onMounted(() => {
   color: #303133;
 }
 
-.todo-stat-card {
-  text-align: center;
-  padding: 8px 0;
+.todo-total-card :deep(.el-card__body) {
+  padding: 20px 24px;
 }
 
-.todo-stat-card :deep(.el-card__body) {
-  padding: 16px;
+.todo-total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-.todo-stat-number {
-  font-size: 32px;
-  font-weight: 700;
-  line-height: 1.2;
+.todo-total-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.todo-stat-label {
-  font-size: 13px;
+.todo-total-label {
+  font-size: 14px;
   color: #909399;
-  margin-top: 4px;
+}
+
+.todo-total-number {
+  font-size: 40px;
+  font-weight: 700;
+  color: #303133;
+}
+
+.todo-total-breakdown {
+  display: flex;
+  gap: 20px;
+}
+
+.breakdown-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: #606266;
+}
+
+.breakdown-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.collapse-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.collapse-count {
+  font-weight: 600;
+  color: #303133;
+}
+
+.collapse-hint {
+  font-size: 12px;
+  color: #909399;
 }
 
 .pending-node-item {

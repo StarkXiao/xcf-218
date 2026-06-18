@@ -125,53 +125,97 @@ export class MessageService {
   }
 
   async getAdminTodoAggregation() {
-    const pendingApprovals = await this.approvalRecordRepository.count({
-      where: { status: 'pending' },
-    });
-
-    const pendingWithdrawals = await this.withdrawalRepository.count({
-      where: { status: 'pending' },
-    });
-
-    const pendingSupplements = await this.supplementRepository.count({
-      where: { status: 'pending' },
-    });
-
-    const submittedApplications = await this.applicationRepository.count({
+    const submittedApps = await this.applicationRepository.find({
       where: { status: 'submitted' },
+      relations: ['serviceItem', 'user'],
+      order: { createdAt: 'ASC' },
     });
 
-    const reviewingApplications = await this.applicationRepository.count({
-      where: { status: 'reviewing' },
+    const pendingRecords = await this.approvalRecordRepository.find({
+      where: { status: 'pending' },
+      relations: ['currentNode', 'approver', 'application', 'application.serviceItem', 'application.user'],
+      order: { createdAt: 'ASC' },
     });
 
-    const supplementingApplications = await this.applicationRepository.count({
-      where: { status: 'supplementing' },
+    const pendingWithdrawals = await this.withdrawalRepository.find({
+      where: { status: 'pending' },
+      relations: ['application', 'application.serviceItem', 'user'],
+      order: { createdAt: 'ASC' },
+    });
+
+    const pendingSupplements = await this.supplementRepository.find({
+      where: { status: 'pending' },
+      relations: ['application', 'application.serviceItem', 'operator'],
+      order: { createdAt: 'ASC' },
     });
 
     const timeoutPending = await this.getTimeoutPendingApprovals();
 
     const pendingByNode: Record<string, number> = {};
-    const pendingRecords = await this.approvalRecordRepository.find({
-      where: { status: 'pending' },
-      relations: ['currentNode'],
-    });
     for (const r of pendingRecords) {
       const nodeName = r.currentNode?.nodeName || '未知节点';
       pendingByNode[nodeName] = (pendingByNode[nodeName] || 0) + 1;
     }
 
+    const allAppIds = new Set<number>();
+
+    for (const app of submittedApps) {
+      allAppIds.add(app.id);
+    }
+    for (const r of pendingRecords) {
+      allAppIds.add(r.applicationId);
+    }
+    for (const w of pendingWithdrawals) {
+      if (w.applicationId) allAppIds.add(w.applicationId);
+    }
+    for (const s of pendingSupplements) {
+      if (s.applicationId) allAppIds.add(s.applicationId);
+    }
+
     return {
-      pendingApprovals,
-      pendingWithdrawals,
-      pendingSupplements,
-      submittedApplications,
-      reviewingApplications,
-      supplementingApplications,
+      submittedCount: submittedApps.length,
+      submittedItems: submittedApps.map(a => ({
+        applicationId: a.id,
+        applicationNo: a.applicationNo,
+        serviceItemName: (a as any).serviceItem?.name,
+        applicantName: (a as any).user?.name,
+        createdAt: a.createdAt,
+      })),
+      approvalCount: pendingRecords.length,
+      approvalItems: pendingRecords.map(r => ({
+        recordId: r.id,
+        applicationId: r.applicationId,
+        applicationNo: r.application?.applicationNo,
+        serviceItemName: r.application?.serviceItem?.name,
+        applicantName: r.application?.user?.name,
+        currentNodeName: r.currentNode?.nodeName,
+        approverName: r.approver?.name,
+        createdAt: r.createdAt,
+      })),
+      withdrawalCount: pendingWithdrawals.length,
+      withdrawalItems: pendingWithdrawals.map(w => ({
+        withdrawalId: w.id,
+        applicationId: w.applicationId,
+        applicationNo: (w as any).application?.applicationNo,
+        serviceItemName: (w as any).application?.serviceItem?.name,
+        applicantName: (w as any).user?.name,
+        reason: w.reason,
+        createdAt: w.createdAt,
+      })),
+      supplementCount: pendingSupplements.length,
+      supplementItems: pendingSupplements.map(s => ({
+        supplementId: s.id,
+        applicationId: s.applicationId,
+        applicationNo: (s as any).application?.applicationNo,
+        serviceItemName: (s as any).application?.serviceItem?.name,
+        operatorName: (s as any).operator?.name,
+        rejectReason: s.rejectReason,
+        createdAt: s.createdAt,
+      })),
       timeoutPendingCount: timeoutPending.length,
       timeoutPendingItems: timeoutPending,
       pendingByNode,
-      totalPending: pendingApprovals + pendingWithdrawals + pendingSupplements + submittedApplications + reviewingApplications + supplementingApplications,
+      totalPending: allAppIds.size,
     };
   }
 
