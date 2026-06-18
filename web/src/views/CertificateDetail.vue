@@ -23,6 +23,22 @@
         <el-descriptions-item label="身份证号">{{ certificate?.user?.idCard }}</el-descriptions-item>
         <el-descriptions-item label="申请编号">{{ certificate?.application?.applicationNo }}</el-descriptions-item>
         <el-descriptions-item label="发证日期">{{ formatDate(certificate?.issuedAt || certificate?.createdAt) }}</el-descriptions-item>
+        <el-descriptions-item label="到期日期">
+          <template v-if="certificate?.expiredAt">
+            <span :class="getExpiryClass(certificate.expiredAt)">
+              {{ formatDate(certificate.expiredAt) }}
+              <el-tag
+                v-if="getExpiryStatus(certificate.expiredAt) !== 'normal'"
+                :type="getExpiryTagType(certificate.expiredAt)"
+                size="small"
+                style="margin-left: 8px"
+              >
+                {{ getExpiryStatusText(certificate.expiredAt) }}
+              </el-tag>
+            </span>
+          </template>
+          <span v-else>长期有效</span>
+        </el-descriptions-item>
       </el-descriptions>
 
       <div style="margin-top: 20px">
@@ -37,6 +53,14 @@
         <el-button @click="viewDownloadRecords">
           <el-icon><Document /></el-icon>
           下载记录
+        </el-button>
+        <el-button
+          v-if="certificate?.expiredAt && certificate?.status === 'generated' && !certificate?.archived"
+          type="warning"
+          @click="goToRenew"
+        >
+          <el-icon><Refresh /></el-icon>
+          {{ getExpiryStatus(certificate.expiredAt) === 'expired' ? '立即续办' : '申请续办' }}
         </el-button>
       </div>
     </el-card>
@@ -69,13 +93,15 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import { View, Download, Document } from '@element-plus/icons-vue'
+import { useRoute, useRouter } from 'vue-router'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { View, Download, Document, Refresh } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
-import { getCertificateById, getDownloadRecords, previewCertificate, downloadCertificate } from '@/api/certificate'
+import { getCertificateById, getDownloadRecords, previewCertificate, downloadCertificate, getRenewalInfo } from '@/api/certificate'
 import type { Certificate, CertificateDownloadRecord } from '@/types'
 import dayjs from 'dayjs'
+
+const router = useRouter()
 
 const route = useRoute()
 const userStore = useUserStore()
@@ -109,7 +135,75 @@ const getActionText = (action: string) => {
   return map[action] || action
 }
 
+const getExpiryStatus = (expiredAt: string) => {
+  const now = dayjs()
+  const expiry = dayjs(expiredAt)
+  const days = expiry.diff(now, 'day')
+  
+  if (days < 0) return 'expired'
+  if (days <= 7) return 'urgent'
+  if (days <= 30) return 'expiring'
+  return 'normal'
+}
+
+const getExpiryStatusText = (expiredAt: string) => {
+  const now = dayjs()
+  const expiry = dayjs(expiredAt)
+  const days = expiry.diff(now, 'day')
+  
+  if (days < 0) return `已过期${Math.abs(days)}天`
+  if (days === 0) return '今天到期'
+  if (days === 1) return '明天到期'
+  return `剩余${days}天`
+}
+
+const getExpiryTagType = (expiredAt: string) => {
+  const status = getExpiryStatus(expiredAt)
+  const map: Record<string, string> = {
+    normal: 'success',
+    expiring: 'warning',
+    urgent: 'danger',
+    expired: 'info',
+  }
+  return map[status] || 'info'
+}
+
+const getExpiryClass = (expiredAt: string) => {
+  const status = getExpiryStatus(expiredAt)
+  if (status === 'expired') return 'text-red-600 font-bold'
+  if (status === 'urgent') return 'text-orange-600 font-bold'
+  if (status === 'expiring') return 'text-yellow-600'
+  return ''
+}
+
 const formatDate = (date?: string) => date ? dayjs(date).format('YYYY-MM-DD HH:mm:ss') : '-'
+
+const goToRenew = async () => {
+  if (!certificate.value) return
+  try {
+    const expiryStatus = getExpiryStatus(certificate.value.expiredAt!)
+    const expiryText = expiryStatus === 'expired' ? '该证照已过期' : '该证照即将到期'
+    await ElMessageBox.confirm(
+      `${expiryText}，确定要申请续办吗？`,
+      '证照续办',
+      {
+        confirmButtonText: '立即续办',
+        cancelButtonText: '取消',
+        type: expiryStatus === 'expired' ? 'error' : 'warning',
+      }
+    )
+    const renewalInfo = await getRenewalInfo(certificate.value.id)
+    if (renewalInfo.renewalServiceItem) {
+      router.push(`/apply/${renewalInfo.renewalServiceItem.id}?renewal=1&certificateId=${certificate.value.id}`)
+    } else {
+      ElMessage.warning('未找到可续办的事项')
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('获取续办信息失败', error)
+    }
+  }
+}
 
 const loadCertificate = async () => {
   const id = route.params.id as string

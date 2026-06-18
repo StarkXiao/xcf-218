@@ -82,6 +82,11 @@
             <el-menu-item index="/my-favorites">我的收藏</el-menu-item>
             <el-menu-item index="/my-subscriptions">我的订阅</el-menu-item>
             <el-menu-item index="/my-certificates">我的证明</el-menu-item>
+            <el-menu-item index="/certificate-reminders">
+              <el-badge :value="reminderCount" :hidden="reminderCount === 0" class="inline-badge">
+                证照到期提醒
+              </el-badge>
+            </el-menu-item>
             <el-menu-item index="/my-window-handlings">窗口办理</el-menu-item>
             <el-menu-item index="/my-evaluations">我的评价</el-menu-item>
             <el-menu-item index="/my-complaints">我的投诉</el-menu-item>
@@ -127,6 +132,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessageBox } from 'element-plus'
 import { useUserStore } from '@/stores/user'
 import { getUnreadCount } from '@/api/message'
+import { getMyReminders } from '@/api/certificate-reminder'
 import {
   HomeFilled,
   Search,
@@ -146,6 +152,7 @@ const router = useRouter()
 const userStore = useUserStore()
 
 const unreadCount = ref(0)
+const reminderCount = ref(0)
 
 const activeMenu = computed(() => {
   if (route.path.startsWith('/services')) return '/services'
@@ -155,6 +162,7 @@ const activeMenu = computed(() => {
   if (route.path.startsWith('/my-favorites')) return '/my-favorites'
   if (route.path.startsWith('/my-subscriptions')) return '/my-subscriptions'
   if (route.path.startsWith('/my-certificates')) return '/my-certificates'
+  if (route.path.startsWith('/certificate-reminders')) return '/certificate-reminders'
   if (route.path.startsWith('/certificates')) return '/my-certificates'
   if (route.path.startsWith('/admin/service-items')) return '/admin/service-items'
   if (route.path.startsWith('/admin/schedule')) return '/admin/schedule'
@@ -188,6 +196,17 @@ const loadUnreadCount = async () => {
   }
 }
 
+const loadReminderCount = async () => {
+  if (userStore.user?.id) {
+    try {
+      const result = await getMyReminders({ status: 'pending', page: 1, pageSize: 1 })
+      reminderCount.value = result.total
+    } catch (error) {
+      console.error('获取提醒数量失败', error)
+    }
+  }
+}
+
 const goMessages = () => {
   router.push('/messages')
 }
@@ -204,8 +223,14 @@ const handleCommand = async (command: string) => {
   }
 }
 
-onMounted(loadUnreadCount)
-watch(() => route.path, loadUnreadCount)
+onMounted(() => {
+  loadUnreadCount()
+  loadReminderCount()
+})
+watch(() => route.path, () => {
+  loadUnreadCount()
+  loadReminderCount()
+})
 </script>
 
 <style scoped>
@@ -288,5 +313,10 @@ watch(() => route.path, loadUnreadCount)
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+
+.inline-badge {
+  display: inline-flex;
+  align-items: center;
 }
 </style>

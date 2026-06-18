@@ -115,6 +115,12 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '我的证明' },
       },
       {
+        path: 'certificate-reminders',
+        name: 'CertificateReminders',
+        component: () => import('@/views/CertificateReminders.vue'),
+        meta: { title: '证照到期提醒' },
+      },
+      {
         path: 'certificates/:id',
         name: 'CertificateDetail',
         component: () => import('@/views/CertificateDetail.vue'),

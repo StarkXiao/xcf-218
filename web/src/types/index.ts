@@ -267,6 +267,41 @@ export interface Certificate {
   downloadRecords?: CertificateDownloadRecord[]
   createdAt: string
   updatedAt: string
+  expiryStatus?: string
+  daysToExpiry?: number
+}
+
+export interface CertificateReminder {
+  id: number
+  userId: number
+  user?: User
+  certificateId: number
+  certificate?: Certificate
+  serviceItemId?: number
+  serviceItem?: ServiceItem
+  expiredAt: string
+  reminderType: string
+  daysBeforeExpiry: number
+  notified: boolean
+  notifiedAt?: string
+  renewalInitiated: boolean
+  renewalInitiatedAt?: string
+  messageId?: number
+  remark?: string
+  createdAt: string
+}
+
+export interface RenewalInfo {
+  certificate: {
+    id: number
+    certificateNo: string
+    certificateType: string
+    expiredAt?: string
+    issuedAt?: string
+  }
+  renewalServiceItem?: ServiceItem
+  prefilledFormData: any
+  reminders: CertificateReminder[]
 }
 
 export interface CertificateDownloadRecord {

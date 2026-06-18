@@ -1,5 +1,5 @@
 import request from '@/utils/request'
-import type { Certificate, CertificateDownloadRecord } from '@/types'
+import type { Certificate, CertificateDownloadRecord, RenewalInfo } from '@/types'
 
 export const getCertificates = (userId?: number, status?: string) => {
   return request.get<any, Certificate[]>('/certificates', { params: { userId, status } })
@@ -45,4 +45,16 @@ export const unarchiveCertificate = (id: number, operatorId: number) => {
 
 export const getCertificateStatistics = () => {
   return request.get<any, { total: number; generated: number; archived: number; downloadCount: number }>('/certificates/statistics')
+}
+
+export const getCertificatesWithExpiryStatus = () => {
+  return request.get<any, Certificate[]>('/certificates/my/with-expiry-status')
+}
+
+export const getRenewalInfo = (id: number) => {
+  return request.get<any, RenewalInfo>(`/certificates/${id}/renewal-info`)
+}
+
+export const createRenewalApplication = (id: number, formData: any) => {
+  return request.post<any, { id: number; applicationNo: string }>(`/certificates/${id}/renew`, { formData })
 }

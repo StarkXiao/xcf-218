@@ -94,6 +94,22 @@
               查看证明
             </el-button>
             <el-button
+              v-if="row.type === 'certificate-reminder'"
+              type="warning"
+              link
+              @click.stop="goToCertificateRenewal(row)"
+            >
+              立即续办
+            </el-button>
+            <el-button
+              v-if="row.type === 'certificate-reminder' && row.serviceItemId"
+              type="primary"
+              link
+              @click.stop="goToServiceItem(row.serviceItemId)"
+            >
+              查看事项
+            </el-button>
+            <el-button
               v-if="(row.type === 'window' || row.type === 'queue') && row.windowHandlingId"
               type="warning"
               link
@@ -133,6 +149,7 @@ const getMessageType = (type: string) => {
     supplement: 'warning',
     subscription: 'success',
     certificate: 'success',
+    'certificate-reminder': 'warning',
     window: 'warning',
     queue: 'danger',
     system: 'info',
@@ -147,6 +164,7 @@ const getMessageTypeText = (type: string) => {
     supplement: '补件通知',
     subscription: '订阅通知',
     certificate: '证明通知',
+    'certificate-reminder': '证照提醒',
     window: '窗口通知',
     queue: '叫号通知',
     system: '系统通知',
@@ -172,6 +190,8 @@ const handleRowClick = async (row: Message) => {
   }
   if (row.type === 'certificate') {
     goToCertificates()
+  } else if (row.type === 'certificate-reminder') {
+    goToCertificateRenewal(row)
   } else if (row.type === 'supplement') {
     if (userStore.isAdmin && row.applicationId) {
       goToReview(row.applicationId)
@@ -226,6 +246,14 @@ const goToServiceItem = (serviceItemId: number) => {
 
 const goToCertificates = () => {
   router.push('/my-certificates')
+}
+
+const goToCertificateRenewal = (row: Message) => {
+  if (row.serviceItemId) {
+    router.push(`/apply/${row.serviceItemId}?renewal=1`)
+  } else {
+    router.push('/certificate-reminders')
+  }
 }
 
 const goToWindowHandling = (id: number) => {
