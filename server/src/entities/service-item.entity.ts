@@ -53,6 +53,15 @@ export class ServiceItem {
   @Column({ type: 'text', nullable: true })
   changeLog: string;
 
+  @Column({ type: 'text', nullable: true })
+  faqs: string;
+
+  @Column({ type: 'text', nullable: true })
+  handlingExamples: string;
+
+  @Column({ type: 'text', nullable: true })
+  riskTips: string;
+
   @CreateDateColumn()
   createdAt: Date;
 

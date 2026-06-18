@@ -30,8 +30,33 @@ export interface ServiceItem {
   isSubscribed?: boolean
   rank?: number
   heatScore?: number
+  faqs?: string
+  handlingExamples?: string
+  riskTips?: string
   createdAt?: string
   updatedAt?: string
+}
+
+export interface FaqItem {
+  question: string
+  answer: string
+  sort?: number
+}
+
+export interface HandlingExample {
+  title: string
+  description: string
+  scenario: string
+  steps: string[]
+  result: string
+  sort?: number
+}
+
+export interface RiskTip {
+  level: 'low' | 'medium' | 'high'
+  title: string
+  content: string
+  sort?: number
 }
 
 export interface HotCategory {

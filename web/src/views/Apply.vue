@@ -19,6 +19,43 @@
         style="margin-bottom: 24px"
       />
 
+      <div v-if="riskTipList.length > 0" class="risk-warning-section">
+        <div class="risk-warning-header">
+          <el-icon :size="24" color="#e6a23c"><Warning /></el-icon>
+          <span class="risk-warning-title">申请前风险提示</span>
+        </div>
+        <div class="risk-tip-list">
+          <div
+            v-for="(risk, index) in riskTipList"
+            :key="index"
+            class="risk-tip-item"
+            :class="`risk-${risk.level}`"
+          >
+            <div class="risk-icon">
+              <el-icon :size="20">
+                <Warning v-if="risk.level === 'high'" />
+                <InfoFilled v-else-if="risk.level === 'medium'" />
+                <QuestionFilled v-else />
+              </el-icon>
+            </div>
+            <div class="risk-content">
+              <div class="risk-title">
+                <el-tag :type="getRiskTagType(risk.level)" size="small">
+                  {{ getRiskLevelLabel(risk.level) }}
+                </el-tag>
+                <span class="risk-title-text">{{ risk.title }}</span>
+              </div>
+              <p class="risk-text">{{ risk.content }}</p>
+            </div>
+          </div>
+        </div>
+        <div class="risk-confirm">
+          <el-checkbox v-model="riskConfirmed">
+            我已仔细阅读并了解上述风险提示，确认继续申请
+          </el-checkbox>
+        </div>
+      </div>
+
       <el-steps :active="1" finish-status="success" style="margin-bottom: 40px">
         <el-step title="填写信息" />
         <el-step title="提交材料" />
@@ -245,13 +282,20 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, type FormInstance, type FormRules, type UploadFile } from 'element-plus'
-import { Upload, Search, Warning, CircleCheck } from '@element-plus/icons-vue'
+import {
+  Upload,
+  Search,
+  Warning,
+  CircleCheck,
+  InfoFilled,
+  QuestionFilled,
+} from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 import { getServiceItemById } from '@/api/service-item'
 import { getCurrentTemplate } from '@/api/material-template'
 import { createApplication, previewApplication, type PreviewResult } from '@/api/application'
 import { linkAppointmentApplication } from '@/api/appointment'
-import type { ServiceItem, TemplateFieldDef, MaterialTemplate, ValidationError } from '@/types'
+import type { ServiceItem, TemplateFieldDef, MaterialTemplate, ValidationError, RiskTip } from '@/types'
 
 const route = useRoute()
 const router = useRouter()
@@ -272,6 +316,8 @@ const uploadedFiles = ref<Record<string, UploadFile[]>>({})
 
 const previewResult = ref<PreviewResult | null>(null)
 const showPreviewDialog = ref(false)
+const riskTipList = ref<RiskTip[]>([])
+const riskConfirmed = ref(false)
 
 const formData = reactive<Record<string, any>>({
   name: '',
@@ -414,6 +460,34 @@ const parseFieldsSafe = (fields: any): TemplateFieldDef[] => {
   return []
 }
 
+const parseJsonSafe = <T>(str: string | undefined, defaultValue: T): T => {
+  if (!str) return defaultValue
+  try {
+    const parsed = JSON.parse(str)
+    return parsed as T
+  } catch {
+    return defaultValue
+  }
+}
+
+const getRiskLevelLabel = (level: string) => {
+  const labels: Record<string, string> = {
+    low: '低风险',
+    medium: '中风险',
+    high: '高风险',
+  }
+  return labels[level] || level
+}
+
+const getRiskTagType = (level: string) => {
+  const types: Record<string, string> = {
+    low: 'success',
+    medium: 'warning',
+    high: 'danger',
+  }
+  return types[level] || 'info'
+}
+
 const loadItem = async () => {
   loading.value = true
   try {
@@ -454,6 +528,8 @@ const loadItem = async () => {
       formData.idCard = userStore.user.idCard
       formData.phone = userStore.user.phone
     }
+
+    riskTipList.value = parseJsonSafe<RiskTip[]>(item.value?.riskTips, [])
   } finally {
     loading.value = false
   }
@@ -533,6 +609,10 @@ const buildPreviewFormData = () => {
 
 const handlePreview = async () => {
   if (!formRef.value || !userStore.user) return
+  if (riskTipList.value.length > 0 && !riskConfirmed.value) {
+    ElMessage.warning('请先阅读并确认申请前风险提示')
+    return
+  }
   const valid = await formRef.value.validate().catch(() => false)
   if (!valid) {
     ElMessage.warning('请先完整填写表单信息')
@@ -572,6 +652,10 @@ const handleSubmitFromPreview = async () => {
 
 const handleSubmit = async () => {
   if (!formRef.value || !userStore.user) return
+  if (riskTipList.value.length > 0 && !riskConfirmed.value) {
+    ElMessage.warning('请先阅读并确认申请前风险提示')
+    return
+  }
   const valid = await formRef.value.validate().catch(() => false)
   if (!valid) return
 
@@ -726,5 +810,85 @@ onMounted(loadItem)
   border-radius: 4px;
   font-size: 14px;
   color: #67c23a;
+}
+.risk-warning-section {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 24px;
+}
+.risk-warning-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #fde68a;
+}
+.risk-warning-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #92400e;
+}
+.risk-tip-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.risk-tip-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 6px;
+  background: #fff;
+  border-left: 3px solid;
+}
+.risk-tip-item.risk-high {
+  border-left-color: #f56c6c;
+}
+.risk-tip-item.risk-high .risk-icon {
+  color: #f56c6c;
+}
+.risk-tip-item.risk-medium {
+  border-left-color: #e6a23c;
+}
+.risk-tip-item.risk-medium .risk-icon {
+  color: #e6a23c;
+}
+.risk-tip-item.risk-low {
+  border-left-color: #67c23a;
+}
+.risk-tip-item.risk-low .risk-icon {
+  color: #67c23a;
+}
+.risk-icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.risk-content {
+  flex: 1;
+}
+.risk-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.risk-title-text {
+  font-weight: 600;
+  font-size: 14px;
+  color: #303133;
+}
+.risk-text {
+  font-size: 13px;
+  color: #606266;
+  line-height: 1.6;
+  margin: 0;
+}
+.risk-confirm {
+  padding-top: 12px;
+  border-top: 1px solid #fde68a;
 }
 </style>

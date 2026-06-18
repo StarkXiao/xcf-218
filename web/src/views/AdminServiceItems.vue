@@ -82,49 +82,179 @@
     <el-dialog
       v-model="dialogVisible"
       :title="isEdit ? '编辑事项' : '新增事项'"
-      width="700px"
+      width="900px"
       @close="resetForm"
     >
-      <el-form ref="formRef" :model="formData" :rules="formRules" label-width="100px">
-        <el-form-item label="事项名称" prop="name">
-          <el-input v-model="formData.name" placeholder="请输入事项名称" />
-        </el-form-item>
-        <el-form-item label="事项编码" prop="code">
-          <el-input v-model="formData.code" placeholder="请输入事项编码" />
-        </el-form-item>
-        <el-form-item label="所属分类" prop="category">
-          <el-input v-model="formData.category" placeholder="如：户籍办理、社会保障等" />
-        </el-form-item>
-        <el-form-item label="办理时限" prop="processingDays">
-          <el-input-number v-model="formData.processingDays" :min="1" :max="365" />
-          <span style="margin-left: 8px">个工作日</span>
-        </el-form-item>
-        <el-form-item label="事项描述" prop="description">
-          <el-input v-model="formData.description" type="textarea" :rows="3" placeholder="请输入事项描述" />
-        </el-form-item>
-        <el-form-item label="办理条件" prop="requirements">
-          <el-input v-model="formData.requirements" type="textarea" :rows="3" placeholder="请输入办理条件" />
-        </el-form-item>
-        <el-form-item label="所需材料" prop="materials">
-          <el-input
-            v-model="materialsText"
-            type="textarea"
-            :rows="4"
-            placeholder="JSON格式，如：[{&quot;name&quot;:&quot;身份证&quot;,&quot;required&quot;:true}]"
-          />
-        </el-form-item>
-        <el-form-item label="更新说明" prop="changeLog">
-          <el-input
-            v-model="formData.changeLog"
-            type="textarea"
-            :rows="2"
-            placeholder="填写本次更新内容，将通知给订阅用户"
-          />
-        </el-form-item>
-        <el-form-item label="立即发布">
-          <el-switch v-model="publishNow" active-text="是" inactive-text="否" />
-        </el-form-item>
-      </el-form>
+      <el-tabs v-model="activeTab" type="border-card">
+        <el-tab-pane label="基本信息" name="basic">
+          <el-form ref="formRef" :model="formData" :rules="formRules" label-width="100px">
+            <el-form-item label="事项名称" prop="name">
+              <el-input v-model="formData.name" placeholder="请输入事项名称" />
+            </el-form-item>
+            <el-form-item label="事项编码" prop="code">
+              <el-input v-model="formData.code" placeholder="请输入事项编码" />
+            </el-form-item>
+            <el-form-item label="所属分类" prop="category">
+              <el-input v-model="formData.category" placeholder="如：户籍办理、社会保障等" />
+            </el-form-item>
+            <el-form-item label="办理时限" prop="processingDays">
+              <el-input-number v-model="formData.processingDays" :min="1" :max="365" />
+              <span style="margin-left: 8px">个工作日</span>
+            </el-form-item>
+            <el-form-item label="事项描述" prop="description">
+              <el-input v-model="formData.description" type="textarea" :rows="3" placeholder="请输入事项描述" />
+            </el-form-item>
+            <el-form-item label="办理条件" prop="requirements">
+              <el-input v-model="formData.requirements" type="textarea" :rows="3" placeholder="请输入办理条件" />
+            </el-form-item>
+            <el-form-item label="所需材料" prop="materials">
+              <el-input
+                v-model="materialsText"
+                type="textarea"
+                :rows="4"
+                placeholder="JSON格式，如：[{&quot;name&quot;:&quot;身份证&quot;,&quot;required&quot;:true}]"
+              />
+            </el-form-item>
+            <el-form-item label="更新说明" prop="changeLog">
+              <el-input
+                v-model="formData.changeLog"
+                type="textarea"
+                :rows="2"
+                placeholder="填写本次更新内容，将通知给订阅用户"
+              />
+            </el-form-item>
+            <el-form-item label="立即发布">
+              <el-switch v-model="publishNow" active-text="是" inactive-text="否" />
+            </el-form-item>
+          </el-form>
+        </el-tab-pane>
+
+        <el-tab-pane label="常见问题" name="faqs">
+          <div class="tab-content">
+            <div style="margin-bottom: 16px">
+              <el-button type="primary" @click="addFaq">
+                <el-icon><Plus /></el-icon> 添加问题
+              </el-button>
+            </div>
+            <div v-if="faqList.length === 0" class="empty-tip">
+              暂无常见问题，点击上方按钮添加
+            </div>
+            <div v-else class="faq-editor-list">
+              <div v-for="(faq, index) in faqList" :key="index" class="faq-editor-item">
+                <div class="faq-item-header">
+                  <span class="faq-item-index">问题 {{ index + 1 }}</span>
+                  <el-button type="danger" link @click="removeFaq(index)">
+                    <el-icon><Delete /></el-icon> 删除
+                  </el-button>
+                </div>
+                <el-input
+                  v-model="faq.question"
+                  placeholder="请输入问题"
+                  style="margin-bottom: 8px"
+                />
+                <el-input
+                  v-model="faq.answer"
+                  type="textarea"
+                  :rows="3"
+                  placeholder="请输入答案"
+                />
+              </div>
+            </div>
+          </div>
+        </el-tab-pane>
+
+        <el-tab-pane label="办理示例" name="examples">
+          <div class="tab-content">
+            <div style="margin-bottom: 16px">
+              <el-button type="primary" @click="addExample">
+                <el-icon><Plus /></el-icon> 添加示例
+              </el-button>
+            </div>
+            <div v-if="exampleList.length === 0" class="empty-tip">
+              暂无办理示例，点击上方按钮添加
+            </div>
+            <div v-else class="example-editor-list">
+              <div v-for="(example, index) in exampleList" :key="index" class="example-editor-item">
+                <div class="example-item-header">
+                  <span class="example-item-index">示例 {{ index + 1 }}</span>
+                  <el-button type="danger" link @click="removeExample(index)">
+                    <el-icon><Delete /></el-icon> 删除
+                  </el-button>
+                </div>
+                <el-form label-width="80px">
+                  <el-form-item label="标题">
+                    <el-input v-model="example.title" placeholder="请输入示例标题" />
+                  </el-form-item>
+                  <el-form-item label="场景">
+                    <el-input v-model="example.scenario" placeholder="请输入适用场景描述" />
+                  </el-form-item>
+                  <el-form-item label="描述">
+                    <el-input v-model="example.description" type="textarea" :rows="2" placeholder="请输入示例描述" />
+                  </el-form-item>
+                  <el-form-item label="步骤">
+                    <div class="steps-editor">
+                      <div v-for="(step, stepIndex) in example.steps" :key="stepIndex" class="step-item">
+                        <el-input v-model="example.steps[stepIndex]" placeholder={`步骤 ${stepIndex + 1}`} />
+                        <el-button type="danger" link @click="removeExampleStep(index, stepIndex)">
+                          <el-icon><Delete /></el-icon>
+                        </el-button>
+                      </div>
+                      <el-button type="primary" link @click="addExampleStep(index)">
+                        <el-icon><Plus /></el-icon> 添加步骤
+                      </el-button>
+                    </div>
+                  </el-form-item>
+                  <el-form-item label="结果">
+                    <el-input v-model="example.result" type="textarea" :rows="2" placeholder="请输入办理结果说明" />
+                  </el-form-item>
+                </el-form>
+              </div>
+            </div>
+          </div>
+        </el-tab-pane>
+
+        <el-tab-pane label="风险提示" name="risks">
+          <div class="tab-content">
+            <div style="margin-bottom: 16px">
+              <el-button type="primary" @click="addRiskTip">
+                <el-icon><Plus /></el-icon> 添加风险提示
+              </el-button>
+              <span style="margin-left: 12px; color: #909399; font-size: 13px">
+                风险提示将在用户申请前展示
+              </span>
+            </div>
+            <div v-if="riskTipList.length === 0" class="empty-tip">
+              暂无风险提示，点击上方按钮添加
+            </div>
+            <div v-else class="risk-editor-list">
+              <div v-for="(risk, index) in riskTipList" :key="index" class="risk-editor-item">
+                <div class="risk-item-header">
+                  <span class="risk-item-index">提示 {{ index + 1 }}</span>
+                  <el-select v-model="risk.level" size="small" style="width: 120px">
+                    <el-option label="低风险" value="low" />
+                    <el-option label="中风险" value="medium" />
+                    <el-option label="高风险" value="high" />
+                  </el-select>
+                  <el-button type="danger" link @click="removeRiskTip(index)">
+                    <el-icon><Delete /></el-icon> 删除
+                  </el-button>
+                </div>
+                <el-input
+                  v-model="risk.title"
+                  placeholder="请输入风险标题"
+                  style="margin-bottom: 8px"
+                />
+                <el-input
+                  v-model="risk.content"
+                  type="textarea"
+                  :rows="3"
+                  placeholder="请输入风险详细说明"
+                />
+              </div>
+            </div>
+          </div>
+        </el-tab-pane>
+      </el-tabs>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
         <el-button type="primary" @click="handleSubmit">确定</el-button>
@@ -147,9 +277,9 @@ import {
   deleteServiceItem,
 } from '@/api/service-item'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
-import { Plus, View, Star, Bell } from '@element-plus/icons-vue'
+import { Plus, View, Star, Bell, Delete } from '@element-plus/icons-vue'
 import dayjs from 'dayjs'
-import type { ServiceItem } from '@/types'
+import type { ServiceItem, FaqItem, HandlingExample, RiskTip } from '@/types'
 
 const userStore = useUserStore()
 
@@ -167,6 +297,10 @@ const isEdit = ref(false)
 const editId = ref(0)
 const publishNow = ref(false)
 const materialsText = ref('')
+const activeTab = ref('basic')
+const faqList = ref<FaqItem[]>([])
+const exampleList = ref<HandlingExample[]>([])
+const riskTipList = ref<RiskTip[]>([])
 
 const formData = reactive<Partial<ServiceItem>>({
   name: '',
@@ -217,6 +351,7 @@ const resetSearch = () => {
 const handleAdd = () => {
   isEdit.value = false
   publishNow.value = false
+  resetForm()
   dialogVisible.value = true
 }
 
@@ -233,9 +368,16 @@ const handleEdit = (row: ServiceItem) => {
     processingDays: row.processingDays,
     changeLog: '',
     active: row.active,
+    faqs: row.faqs,
+    handlingExamples: row.handlingExamples,
+    riskTips: row.riskTips,
   })
   materialsText.value = row.materials || ''
+  faqList.value = parseJsonSafe<FaqItem[]>(row.faqs, [])
+  exampleList.value = parseJsonSafe<HandlingExample[]>(row.handlingExamples, [])
+  riskTipList.value = parseJsonSafe<RiskTip[]>(row.riskTips, [])
   publishNow.value = false
+  activeTab.value = 'basic'
   dialogVisible.value = true
 }
 
@@ -249,8 +391,69 @@ const resetForm = () => {
   formData.processingDays = 5
   formData.changeLog = ''
   formData.active = true
+  formData.faqs = ''
+  formData.handlingExamples = ''
+  formData.riskTips = ''
   materialsText.value = ''
+  faqList.value = []
+  exampleList.value = []
+  riskTipList.value = []
+  activeTab.value = 'basic'
   formRef.value?.resetFields()
+}
+
+const parseJsonSafe = <T>(str: string | undefined, defaultValue: T): T => {
+  if (!str) return defaultValue
+  try {
+    const parsed = JSON.parse(str)
+    return parsed as T
+  } catch {
+    return defaultValue
+  }
+}
+
+const addFaq = () => {
+  faqList.value.push({ question: '', answer: '', sort: faqList.value.length + 1 })
+}
+
+const removeFaq = (index: number) => {
+  faqList.value.splice(index, 1)
+}
+
+const addExample = () => {
+  exampleList.value.push({
+    title: '',
+    description: '',
+    scenario: '',
+    steps: [''],
+    result: '',
+    sort: exampleList.value.length + 1,
+  })
+}
+
+const removeExample = (index: number) => {
+  exampleList.value.splice(index, 1)
+}
+
+const addExampleStep = (exampleIndex: number) => {
+  exampleList.value[exampleIndex].steps.push('')
+}
+
+const removeExampleStep = (exampleIndex: number, stepIndex: number) => {
+  exampleList.value[exampleIndex].steps.splice(stepIndex, 1)
+}
+
+const addRiskTip = () => {
+  riskTipList.value.push({
+    level: 'medium',
+    title: '',
+    content: '',
+    sort: riskTipList.value.length + 1,
+  })
+}
+
+const removeRiskTip = (index: number) => {
+  riskTipList.value.splice(index, 1)
 }
 
 const handleSubmit = async () => {
@@ -268,7 +471,11 @@ const handleSubmit = async () => {
           }
         }
 
-        const data = { ...formData, materials }
+        const faqs = faqList.value.length > 0 ? JSON.stringify(faqList.value) : ''
+        const handlingExamples = exampleList.value.length > 0 ? JSON.stringify(exampleList.value) : ''
+        const riskTips = riskTipList.value.length > 0 ? JSON.stringify(riskTipList.value) : ''
+
+        const data = { ...formData, materials, faqs, handlingExamples, riskTips }
         if (isEdit.value) {
           await updateServiceItem(editId.value, data)
           if (publishNow.value && userStore.user) {
@@ -376,5 +583,61 @@ onMounted(loadData)
   display: flex;
   align-items: center;
   gap: 4px;
+}
+.tab-content {
+  padding: 8px 0;
+}
+.empty-tip {
+  text-align: center;
+  padding: 40px 0;
+  color: #909399;
+  font-size: 14px;
+  background: #f5f7fa;
+  border-radius: 4px;
+}
+.faq-editor-list,
+.example-editor-list,
+.risk-editor-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.faq-editor-item,
+.example-editor-item,
+.risk-editor-item {
+  background: #fafafa;
+  border: 1px solid #ebeef5;
+  border-radius: 6px;
+  padding: 16px;
+}
+.faq-item-header,
+.example-item-header,
+.risk-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #ebeef5;
+}
+.faq-item-index,
+.example-item-index,
+.risk-item-index {
+  font-weight: 600;
+  color: #303133;
+  font-size: 14px;
+}
+.steps-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.step-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.step-item .el-input {
+  flex: 1;
 }
 </style>
