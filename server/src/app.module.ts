@@ -34,8 +34,10 @@ import { JointMaterialRelation } from './entities/joint-material-relation.entity
 import { HotCategory } from './entities/hot-category.entity';
 import { HotItem } from './entities/hot-item.entity';
 import { WithdrawalRecord } from './entities/withdrawal-record.entity';
+import { ExportArchive } from './entities/export-archive.entity';
 import { UserModule } from './modules/user/user.module';
 import { HighFrequencyModule } from './modules/high-frequency/high-frequency.module';
+import { ExportArchiveModule } from './modules/export-archive/export-archive.module';
 import { CertificateReminderModule } from './modules/certificate-reminder/certificate-reminder.module';
 import { JointApplicationModule } from './modules/joint-application/joint-application.module';
 import { ServiceItemModule } from './modules/service-item/service-item.module';
@@ -69,13 +71,13 @@ import * as path from 'path';
       username: 'root',
       password: 'root123456',
       database: 'government_service',
-      entities: [User, ServiceItem, Application, ProgressRecord, Message, MaterialFile, Schedule, Appointment, SupplementRecord, ProxyApplication, ProxyProgressRecord, ProxyRelation, Favorite, Subscription, Certificate, CertificateDownloadRecord, WindowHandling, QueueCall, ApprovalFlow, ApprovalNode, ApprovalRecord, ApprovalComment, ApprovalHistory, MaterialTemplate, Evaluation, Complaint, Callback, CertificateReminder, JointApplication, JointSubApplication, JointMaterialRelation, HotCategory, HotItem, WithdrawalRecord],
+      entities: [User, ServiceItem, Application, ProgressRecord, Message, MaterialFile, Schedule, Appointment, SupplementRecord, ProxyApplication, ProxyProgressRecord, ProxyRelation, Favorite, Subscription, Certificate, CertificateDownloadRecord, WindowHandling, QueueCall, ApprovalFlow, ApprovalNode, ApprovalRecord, ApprovalComment, ApprovalHistory, MaterialTemplate, Evaluation, Complaint, Callback, CertificateReminder, JointApplication, JointSubApplication, JointMaterialRelation, HotCategory, HotItem, WithdrawalRecord, ExportArchive],
       synchronize: true,
       logging: false,
       charset: 'utf8mb4',
       timezone: '+08:00',
     }),
-    TypeOrmModule.forFeature([User, ServiceItem, Application, ProgressRecord, Message, MaterialFile, Schedule, Appointment, SupplementRecord, ProxyApplication, ProxyProgressRecord, ProxyRelation, Favorite, Subscription, Certificate, CertificateDownloadRecord, WindowHandling, QueueCall, ApprovalFlow, ApprovalNode, ApprovalRecord, ApprovalComment, ApprovalHistory, MaterialTemplate, Evaluation, Complaint, Callback, CertificateReminder, JointApplication, JointSubApplication, JointMaterialRelation, HotCategory, HotItem, WithdrawalRecord]),
+    TypeOrmModule.forFeature([User, ServiceItem, Application, ProgressRecord, Message, MaterialFile, Schedule, Appointment, SupplementRecord, ProxyApplication, ProxyProgressRecord, ProxyRelation, Favorite, Subscription, Certificate, CertificateDownloadRecord, WindowHandling, QueueCall, ApprovalFlow, ApprovalNode, ApprovalRecord, ApprovalComment, ApprovalHistory, MaterialTemplate, Evaluation, Complaint, Callback, CertificateReminder, JointApplication, JointSubApplication, JointMaterialRelation, HotCategory, HotItem, WithdrawalRecord, ExportArchive]),
     UserModule,
     ServiceItemModule,
     ApplicationModule,
@@ -98,6 +100,7 @@ import * as path from 'path';
     CertificateReminderModule,
     JointApplicationModule,
     HighFrequencyModule,
+    ExportArchiveModule,
   ],
   providers: [SeedService],
 })
@@ -120,6 +123,10 @@ export class AppModule implements OnModuleInit {
     const certificatesDir = path.join(uploadDir, 'certificates');
     if (!fs.existsSync(certificatesDir)) {
       fs.mkdirSync(certificatesDir, { recursive: true });
+    }
+    const archivesDir = path.join(uploadDir, 'archives');
+    if (!fs.existsSync(archivesDir)) {
+      fs.mkdirSync(archivesDir, { recursive: true });
     }
     await this.seedService.seed();
   }
