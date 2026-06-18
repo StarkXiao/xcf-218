@@ -35,7 +35,7 @@
         <el-table-column prop="createdAt" label="时间" width="180">
           <template #default="{ row }">{{ formatDate(row.createdAt) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="120">
+        <el-table-column label="操作" width="160">
           <template #default="{ row }">
             <el-button
               v-if="!row.read"
@@ -52,6 +52,14 @@
               @click.stop="goToApplication(row.applicationId)"
             >
               查看申请
+            </el-button>
+            <el-button
+              v-if="row.appointmentId"
+              type="success"
+              link
+              @click.stop="goToAppointment(row.appointmentId)"
+            >
+              查看预约
             </el-button>
           </template>
         </el-table-column>
@@ -112,7 +120,9 @@ const handleRowClick = async (row: Message) => {
   if (!row.read) {
     await markOneRead(row.id)
   }
-  if (row.applicationId) {
+  if (row.appointmentId) {
+    goToAppointment(row.appointmentId)
+  } else if (row.applicationId) {
     goToApplication(row.applicationId)
   }
 }
@@ -132,6 +142,10 @@ const markAllRead = async () => {
 
 const goToApplication = (id: number) => {
   router.push(`/applications/${id}`)
+}
+
+const goToAppointment = (id: number) => {
+  router.push(`/my-appointments?highlight=${id}`)
 }
 
 onMounted(loadMessages)

@@ -21,6 +21,7 @@
         v-for="appt in list"
         :key="appt.id"
         class="appointment-card"
+        :class="{ 'is-highlight': highlightId === appt.id }"
         shadow="hover"
       >
         <div class="card-header">
@@ -100,8 +101,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted, nextTick } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useUserStore } from '@/stores/user'
 import { getAppointments, cancelAppointment, linkAppointmentApplication } from '@/api/appointment'
@@ -109,11 +110,13 @@ import type { Appointment } from '@/types'
 import dayjs from 'dayjs'
 
 const router = useRouter()
+const route = useRoute()
 const userStore = useUserStore()
 
 const loading = ref(false)
 const list = ref<Appointment[]>([])
 const statusFilter = ref('')
+const highlightId = ref<number | null>(null)
 
 const weekdayMap = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
 
@@ -181,7 +184,19 @@ const goApply = async (appt: Appointment) => {
   router.push(`/apply/${appt.serviceItemId}?appointmentId=${appt.id}`)
 }
 
-onMounted(loadList)
+onMounted(async () => {
+  if (route.query.highlight) {
+    highlightId.value = Number(route.query.highlight)
+  }
+  await loadList()
+  if (highlightId.value) {
+    await nextTick()
+    const el = document.querySelector('.is-highlight')
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  }
+})
 </script>
 
 <style scoped>
@@ -204,6 +219,14 @@ onMounted(loadList)
 }
 .appointment-card {
   border-radius: 8px;
+}
+.appointment-card.is-highlight {
+  border: 2px solid #409eff;
+  animation: highlight-fade 3s ease-out;
+}
+@keyframes highlight-fade {
+  0% { box-shadow: 0 0 0 4px rgba(64, 158, 255, 0.4); }
+  100% { box-shadow: none; }
 }
 .card-header {
   display: flex;

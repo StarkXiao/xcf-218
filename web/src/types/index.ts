@@ -69,6 +69,7 @@ export interface Message {
   read: boolean
   type: string
   applicationId?: number
+  appointmentId?: number
   createdAt: string
 }
 

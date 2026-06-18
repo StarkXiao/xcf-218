@@ -94,6 +94,7 @@ export class AppointmentService {
         title: '预约取号成功',
         content: `您已成功预约【${schedule.serviceItem.name}】，预约编号：${appointmentNo}，排队号：${queueNumber}，预约时间：${schedule.date} ${schedule.startTime}-${schedule.endTime}。请按时前往办理。`,
         type: 'appointment',
+        appointmentId: saved.id,
       });
 
       await queryRunner.commitTransaction();
@@ -178,16 +179,20 @@ export class AppointmentService {
       if (remark) appt.remark = remark;
       await queryRunner.manager.save(appt);
 
-      if (appt.applicationId && ['completed', 'cancelled'].includes(status)) {
-        const stepMap: Record<string, string> = {
-          completed: '现场办理完成',
-          cancelled: '预约已取消',
+      if (appt.applicationId) {
+        const progressStepMap: Record<string, { step: string; status: string }> = {
+          checked_in: { step: '预约签到', status: 'completed' },
+          processing: { step: '现场办理中', status: 'completed' },
+          completed: { step: '现场办理完成', status: 'completed' },
+          cancelled: { step: '预约已取消', status: 'failed' },
+          no_show: { step: '未到场（预约过期）', status: 'failed' },
         };
-        if (stepMap[status]) {
+        const progressInfo = progressStepMap[status];
+        if (progressInfo) {
           await queryRunner.manager.save(ProgressRecord, {
             applicationId: appt.applicationId,
-            step: stepMap[status],
-            status: status === 'cancelled' ? 'failed' : 'completed',
+            step: progressInfo.step,
+            status: progressInfo.status,
             remark: remark || '',
             operatorId,
           });
@@ -216,6 +221,8 @@ export class AppointmentService {
           title: titleMap[status],
           content: contentMap[status] || '',
           type: 'appointment',
+          applicationId: appt.applicationId || null,
+          appointmentId: appt.id,
         });
       }
 
